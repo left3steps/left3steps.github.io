@@ -194,6 +194,7 @@ button { color: inherit; }
 .setup-panel, .admin-login-card { max-width: 680px; margin: 35px auto; padding: 55px; border: 1px solid var(--line); background: #fff; }
 .setup-panel h2, .admin-login-card h2, .panel-heading h2 { margin: 0 0 13px; font-family: var(--font-serif); font-size: 2rem; font-weight: 400; }
 .setup-panel > p, .admin-login-card > p { color: var(--muted); }
+.admin-secondary-action { width: 100%; margin-top: 14px; padding: 12px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--deep-sage); cursor: pointer; }
 .setup-panel ol { margin: 32px 0; padding: 0; list-style: none; }
 .setup-panel li { display: flex; gap: 18px; padding: 18px 0; border-top: 1px solid var(--line); }
 .setup-panel li > span { display: inline-flex; width: 28px; height: 28px; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: 50%; background: var(--ink); color: #fff; font-size: .72rem; }

@@ -186,15 +186,21 @@ function setupAdmin() {
   const app = document.querySelector("[data-admin-app]");
   if (!app) return;
   const loginPanel = app.querySelector("[data-admin-login]");
+  const passwordPanel = app.querySelector("[data-password-setup]");
   const workspace = app.querySelector("[data-admin-workspace]");
   const loginForm = app.querySelector("[data-login-form]");
+  const passwordForm = app.querySelector("[data-password-form]");
   const postForm = app.querySelector("[data-post-form]");
   const list = app.querySelector("[data-admin-post-list]");
   const loginMessage = app.querySelector("[data-login-message]");
+  const passwordMessage = app.querySelector("[data-password-message]");
   const saveMessage = app.querySelector("[data-save-message]");
   let session = null;
   let posts = [];
   let current = null;
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const recoveryToken = hash.get("access_token");
+  const recoveryType = hash.get("type");
 
   const showMessage = (element, message, error = false) => {
     element.hidden = !message;
@@ -270,6 +276,53 @@ function setupAdmin() {
     } catch (error) { showMessage(loginMessage, error.message, true); }
   });
 
+  app.querySelector("[data-recovery]").addEventListener("click", async () => {
+    const email = loginForm.elements.email.value.trim();
+    if (!email) {
+      showMessage(loginMessage, "먼저 관리자 이메일을 입력해주세요.", true);
+      loginForm.elements.email.focus();
+      return;
+    }
+    showMessage(loginMessage, "비밀번호 설정 메일을 보내는 중입니다.");
+    try {
+      const response = await fetch(`${SUPABASE_URL}/auth/v1/recover?redirect_to=${encodeURIComponent('https://left3steps.github.io/admin/')}`, {
+        method: "POST",
+        headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.msg || result.message || "메일을 보내지 못했습니다.");
+      }
+      showMessage(loginMessage, "메일을 보냈습니다. 받은 편지함의 비밀번호 설정 링크를 열어주세요.");
+    } catch (error) { showMessage(loginMessage, error.message, true); }
+  });
+
+  passwordForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const password = passwordForm.elements.password.value;
+    const confirmPassword = passwordForm.elements.confirm_password.value;
+    if (password !== confirmPassword) {
+      showMessage(passwordMessage, "두 비밀번호가 일치하지 않습니다.", true);
+      return;
+    }
+    showMessage(passwordMessage, "비밀번호를 저장하는 중입니다.");
+    try {
+      const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        method: "PUT",
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${recoveryToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.msg || result.message || "비밀번호를 저장하지 못했습니다.");
+      history.replaceState(null, "", "/admin/");
+      passwordPanel.hidden = true;
+      loginPanel.hidden = false;
+      loginForm.elements.email.value = result.email || "nature@left3steps.com";
+      showMessage(loginMessage, "비밀번호가 설정됐습니다. 새 비밀번호로 로그인하세요.");
+    } catch (error) { showMessage(passwordMessage, error.message, true); }
+  });
+
   postForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const data = new FormData(postForm);
@@ -316,6 +369,12 @@ function setupAdmin() {
     const saved = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
     if (saved?.access_token) enterWorkspace(saved).catch(() => localStorage.removeItem(SESSION_KEY));
   } catch { localStorage.removeItem(SESSION_KEY); }
+
+  if (recoveryToken && (recoveryType === "recovery" || recoveryType === "invite")) {
+    loginPanel.hidden = true;
+    workspace.hidden = true;
+    passwordPanel.hidden = false;
+  }
 }
 
 setupNavigation();

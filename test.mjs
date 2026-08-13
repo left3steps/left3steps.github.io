@@ -27,6 +27,7 @@ if (!home.includes("완벽한 집보다") || !home.includes("하루결")) throw 
 if ((list.match(/data-article-card/g) || []).length !== 10) throw new Error("Article list must contain 10 posts");
 if (!home.includes('rel="canonical" href="https://left3steps.github.io/"')) throw new Error("Canonical URL is incorrect");
 if (!admin.includes("편집자 로그인") || !admin.includes('name="password"')) throw new Error("Admin page is incomplete");
+if (!admin.includes("처음 접속 또는 비밀번호 설정") || !admin.includes("관리자 비밀번호 설정")) throw new Error("Admin recovery flow is incomplete");
 if (!client.includes("harugyeol_posts") || !client.includes("sb_publishable_")) throw new Error("Supabase client is not configured");
 if (/service_role|sb_secret_/.test(client)) throw new Error("A secret Supabase key must not be shipped to the browser");
 if (!home.includes('google-adsense-account') || !home.includes('ca-pub-1146138210876381')) throw new Error("AdSense verification is missing");

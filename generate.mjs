@@ -172,6 +172,11 @@ function adminPage() {
       <section class="admin-login-card" data-admin-login>
         <span class="kicker">Secure access</span><h2>편집자 로그인</h2><p>등록된 Supabase 관리자 계정으로 로그인하세요.</p>
         <form class="admin-form compact-form" data-login-form><label>이메일<input name="email" type="email" required autocomplete="username"></label><label>비밀번호<input name="password" type="password" required autocomplete="current-password"></label><p class="form-message full-field" data-login-message hidden></p><button class="primary-button" type="submit">로그인</button></form>
+        <button class="admin-secondary-action" type="button" data-recovery>처음 접속 또는 비밀번호 설정</button>
+      </section>
+      <section class="admin-login-card" data-password-setup hidden>
+        <span class="kicker">Set password</span><h2>관리자 비밀번호 설정</h2><p>앞으로 편집 스튜디오에 로그인할 비밀번호를 직접 설정하세요.</p>
+        <form class="admin-form compact-form" data-password-form><label>새 비밀번호<input name="password" type="password" required minlength="10" autocomplete="new-password"></label><label>새 비밀번호 확인<input name="confirm_password" type="password" required minlength="10" autocomplete="new-password"></label><p class="form-message full-field" data-password-message hidden></p><button class="primary-button" type="submit">비밀번호 저장</button></form>
       </section>
       <section class="admin-workspace" data-admin-workspace hidden>
         <div class="admin-toolbar"><div><span>로그인됨</span><strong data-admin-email></strong></div><div class="admin-stats"><span>전체 <strong data-post-count>0</strong></span><span>공개 <strong data-published-count>0</strong></span></div><button type="button" data-logout>로그아웃</button></div>
