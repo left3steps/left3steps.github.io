@@ -1,0 +1,10 @@
+{
+  "name": "harugyeol-github-pages",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node generate.mjs",
+    "test": "node generate.mjs && node test.mjs"
+  }
+}
