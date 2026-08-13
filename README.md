@@ -19,4 +19,4 @@ npm test
 - 새 글은 `/article/?slug=...` 주소로 열립니다.
 - 브라우저에는 공개용 publishable key만 포함하며, 쓰기는 RLS와 `app_metadata.harugyeol_role = admin`으로 제한합니다.
 
-애드센스 등록 후 발급받은 사이트 확인 메타 태그와 `ads.txt` 값은 승인 요청 전에 추가합니다.
+Google AdSense 게시자 `pub-1146138210876381`의 사이트 확인 메타 태그, 로더 스크립트, `ads.txt`를 포함합니다.

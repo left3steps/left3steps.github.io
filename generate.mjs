@@ -2,6 +2,7 @@ import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import { seedPosts } from "./data/posts.mjs";
 
 const ORIGIN = "https://left3steps.github.io";
+const ADSENSE_CLIENT = "ca-pub-1146138210876381";
 const OUT = new URL("./docs/", import.meta.url);
 
 const escapeHtml = (value = "") => String(value)
@@ -33,6 +34,7 @@ function document({ title, description, path = "/", content, schema = null, noin
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(fullTitle)}</title>
   <meta name="description" content="${escapeHtml(description)}">
+  <meta name="google-adsense-account" content="${ADSENSE_CLIENT}">
   ${noindex ? '<meta name="robots" content="noindex">' : '<meta name="robots" content="index,follow,max-image-preview:large">'}
   <link rel="canonical" href="${canonical}">
   <meta property="og:locale" content="ko_KR">
@@ -45,6 +47,7 @@ function document({ title, description, path = "/", content, schema = null, noin
   <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="/assets/styles.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2248%22 fill=%22%2336564b%22/><text x=%2250%22 y=%2265%22 font-size=%2252%22 text-anchor=%22middle%22 fill=%22white%22>ㅎ</text></svg>">
+  ${noindex ? "<!-- AdSense is disabled on utility pages. -->" : `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}" crossorigin="anonymous"></script>`}
   ${schema ? `<script type="application/ld+json">${JSON.stringify(schema).replaceAll("<", "\\u003c")}</script>` : ""}
 </head>
 <body>
@@ -247,6 +250,7 @@ for (const post of seedPosts) await output(`articles/${post.slug}/index.html`, a
 for (const [slug, page] of Object.entries(pages)) await output(`${slug}/index.html`, infoPage(slug, page));
 await output("404.html", document({ title: "페이지를 찾을 수 없습니다", description: "요청하신 페이지가 없습니다.", path: "/404.html", noindex: true, content: `<div class="not-found"><span>404</span><h1>페이지를 찾을 수 없습니다.</h1><p>주소가 바뀌었거나 삭제된 페이지입니다.</p><a class="primary-button" href="/">홈으로 돌아가기</a></div>` }));
 await output("robots.txt", `User-agent: *\nAllow: /\n\nSitemap: ${ORIGIN}/sitemap.xml\n`);
+await output("ads.txt", `google.com, pub-1146138210876381, DIRECT, f08c47fec0942fa0\n`);
 await output("sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${["/", "/articles/", "/about/", "/editorial-policy/", "/privacy/", "/terms/", ...seedPosts.map((post) => `/articles/${post.slug}/`)].map((path) => `<url><loc>${ORIGIN}${path}</loc></url>`).join("")}</urlset>\n`);
 await output(".nojekyll", "");
 await mkdir(new URL("assets/", OUT), { recursive: true });
