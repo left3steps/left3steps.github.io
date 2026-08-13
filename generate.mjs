@@ -117,7 +117,7 @@ function articles() {
     path: "/articles/",
     content: `<div class="page-shell articles-page"><div class="page-intro"><span class="kicker">Living library</span><h1>생활 안내서</h1><p>집을 돌보는 일이 버겁지 않도록, 바로 적용할 수 있는 순서와 기준으로 정리했습니다.</p></div>
       <div class="filter-panel"><div class="search-box"><label class="sr-only" for="article-search">글 검색</label><input id="article-search" type="search" placeholder="제목이나 내용으로 검색" data-article-search></div><div class="category-tabs">${categories.map((name, index) => `<button class="${index === 0 ? "active" : ""}" type="button" data-category="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join("")}</div></div>
-      <p class="result-count" data-result-count>총 ${seedPosts.length}편의 글</p><div class="article-grid all-articles-grid">${seedPosts.map((post) => card(post, true)).join("")}</div><div class="empty-results" data-empty-results>검색 조건에 맞는 글이 없습니다.</div></div>`,
+      <p class="result-count" data-result-count>총 ${seedPosts.length}편의 글</p><div class="article-grid all-articles-grid" data-remote-articles>${seedPosts.map((post) => card(post, true)).join("")}</div><div class="empty-results" data-empty-results>검색 조건에 맞는 글이 없습니다.</div></div>`,
   });
 }
 
@@ -141,10 +141,47 @@ function article(post) {
     description: post.excerpt,
     path: `/articles/${post.slug}/`,
     schema,
-    content: `<article><nav class="breadcrumbs" aria-label="현재 위치"><a href="/">홈</a><span>/</span><a href="/articles/">생활 안내서</a><span>/</span><span>${escapeHtml(post.category)}</span></nav>
-      <header class="article-hero accent-${post.accent}"><div class="article-title-wrap"><div class="eyebrow-row"><span>${escapeHtml(post.category)}</span><span>${post.readingMinutes}분 읽기</span></div><h1>${escapeHtml(post.title)}</h1><p>${escapeHtml(post.excerpt)}</p><div class="article-byline"><span>하루결 편집부</span><time datetime="${post.publishedAt}">${formatDate(post.publishedAt)}</time></div></div><div class="article-hero-art" aria-hidden="true"><span></span><i></i><b></b></div></header>
-      <div class="article-layout"><aside class="article-aside"><span>이 글의 핵심</span><p>${escapeHtml(post.intro)}</p></aside><div class="article-content"><p class="article-lead">${escapeHtml(post.intro)}</p>${sections}<div class="article-note"><strong>편집 메모</strong><p>집의 크기와 가족 구성에 따라 맞는 방법은 달라질 수 있습니다. 한 번에 모두 바꾸기보다 가장 불편한 한 지점부터 시험해보세요.</p></div></div></div></article>
+    content: `<article data-live-article data-post-slug="${escapeHtml(post.slug)}"><nav class="breadcrumbs" aria-label="현재 위치"><a href="/">홈</a><span>/</span><a href="/articles/">생활 안내서</a><span>/</span><span data-live-category>${escapeHtml(post.category)}</span></nav>
+      <header class="article-hero accent-${post.accent}" data-live-hero><div class="article-title-wrap"><div class="eyebrow-row"><span data-live-category>${escapeHtml(post.category)}</span><span data-live-reading>${post.readingMinutes}분 읽기</span></div><h1 data-live-title>${escapeHtml(post.title)}</h1><p data-live-excerpt>${escapeHtml(post.excerpt)}</p><div class="article-byline"><span>하루결 편집부</span><time datetime="${post.publishedAt}" data-live-date>${formatDate(post.publishedAt)}</time></div></div><div class="article-hero-art" aria-hidden="true"><span></span><i></i><b></b></div></header>
+      <div class="article-layout"><aside class="article-aside"><span>이 글의 핵심</span><p data-live-intro>${escapeHtml(post.intro)}</p></aside><div class="article-content" data-live-content><p class="article-lead">${escapeHtml(post.intro)}</p>${sections}<div class="article-note"><strong>편집 메모</strong><p>집의 크기와 가족 구성에 따라 맞는 방법은 달라질 수 있습니다. 한 번에 모두 바꾸기보다 가장 불편한 한 지점부터 시험해보세요.</p></div></div></div></article>
       ${related.length ? `<section class="section-shell related-section"><div class="section-heading"><div><span class="section-number">Next</span><h2>이어 읽기</h2></div></div><div class="article-grid related-grid">${related.map((item) => card(item)).join("")}</div></section>` : ""}`,
+  });
+}
+
+function dynamicArticle() {
+  return document({
+    title: "생활 안내서",
+    description: "하루결 편집 스튜디오에서 발행한 최신 생활 안내서입니다.",
+    path: "/article/",
+    noindex: true,
+    content: `<div class="dynamic-article-shell" data-dynamic-article><div class="loading-card"><span class="kicker">Living guide</span><h1>글을 불러오는 중입니다</h1><p>잠시만 기다려주세요.</p></div></div>`,
+  });
+}
+
+function adminPage() {
+  return document({
+    title: "편집 스튜디오",
+    description: "하루결 관리자 전용 게시글 편집 화면입니다.",
+    path: "/admin/",
+    noindex: true,
+    content: `<div class="admin-page" data-admin-app>
+      <header class="admin-page-header"><span class="brand-mark">ㅎ</span><div><span>하루결</span><h1>편집 스튜디오</h1></div></header>
+      <section class="admin-login-card" data-admin-login>
+        <span class="kicker">Secure access</span><h2>편집자 로그인</h2><p>등록된 Supabase 관리자 계정으로 로그인하세요.</p>
+        <form class="admin-form compact-form" data-login-form><label>이메일<input name="email" type="email" required autocomplete="username"></label><label>비밀번호<input name="password" type="password" required autocomplete="current-password"></label><p class="form-message full-field" data-login-message hidden></p><button class="primary-button" type="submit">로그인</button></form>
+      </section>
+      <section class="admin-workspace" data-admin-workspace hidden>
+        <div class="admin-toolbar"><div><span>로그인됨</span><strong data-admin-email></strong></div><div class="admin-stats"><span>전체 <strong data-post-count>0</strong></span><span>공개 <strong data-published-count>0</strong></span></div><button type="button" data-logout>로그아웃</button></div>
+        <div class="admin-columns"><section class="editor-panel"><div class="panel-heading"><div><span class="kicker">Editor</span><h2 data-editor-title>새 글 작성</h2></div><button type="button" data-new-post hidden>새 글</button></div>
+          <form class="admin-form" data-post-form>
+            <input type="hidden" name="id"><label class="full-field">제목<input name="title" required maxlength="120"></label><label>주소 슬러그<input name="slug" required pattern="[a-z0-9-]+" placeholder="english-post-address"><small>영문 소문자·숫자·하이픈만 사용합니다.</small></label><label>카테고리<select name="category"><option>정리</option><option>청소</option><option>주방</option><option>루틴</option><option>살림도구</option></select></label>
+            <label class="full-field">요약<textarea name="excerpt" required rows="3" minlength="20" maxlength="320"></textarea></label><label class="full-field">도입문<textarea name="intro" required rows="4" minlength="20" maxlength="1000"></textarea></label><label class="full-field">본문 <small>소제목은 ##, 체크 항목은 - 로 시작합니다.</small><textarea name="body" required rows="18" placeholder="## 첫 번째 소제목&#10;본문을 입력하세요.&#10;&#10;- 체크 항목"></textarea></label>
+            <label>예상 읽기 시간<input name="reading_minutes" type="number" min="1" max="60" value="5"></label><label>상태<select name="status"><option value="draft">초안</option><option value="published">공개 발행</option></select></label><label class="check-field"><input name="featured" type="checkbox"> 홈 추천 글로 표시</label><p class="form-message full-field" data-save-message hidden></p><div class="form-actions full-field"><button class="primary-button" type="submit">저장</button></div>
+          </form></section>
+          <aside class="post-manager"><div class="panel-heading"><div><span class="kicker">Library</span><h2>게시글 관리</h2></div></div><div class="admin-post-list" data-admin-post-list><p>게시글을 불러오는 중입니다.</p></div></aside>
+        </div>
+      </section>
+    </div>`,
   });
 }
 
@@ -204,6 +241,8 @@ function infoPage(slug, page) {
 
 await output("index.html", home());
 await output("articles/index.html", articles());
+await output("article/index.html", dynamicArticle());
+await output("admin/index.html", adminPage());
 for (const post of seedPosts) await output(`articles/${post.slug}/index.html`, article(post));
 for (const [slug, page] of Object.entries(pages)) await output(`${slug}/index.html`, infoPage(slug, page));
 await output("404.html", document({ title: "페이지를 찾을 수 없습니다", description: "요청하신 페이지가 없습니다.", path: "/404.html", noindex: true, content: `<div class="not-found"><span>404</span><h1>페이지를 찾을 수 없습니다.</h1><p>주소가 바뀌었거나 삭제된 페이지입니다.</p><a class="primary-button" href="/">홈으로 돌아가기</a></div>` }));
@@ -217,4 +256,4 @@ await Promise.all([
   copyFile(new URL("assets/og.png", import.meta.url), new URL("assets/og.png", OUT)),
 ]);
 
-console.log(`Generated ${seedPosts.length + 7} pages in docs/`);
+console.log(`Generated ${seedPosts.length + 9} pages in docs/`);
