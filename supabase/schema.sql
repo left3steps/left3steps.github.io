@@ -28,10 +28,10 @@ grant select on table public.harugyeol_posts to anon, authenticated;
 grant insert, update, delete on table public.harugyeol_posts to authenticated;
 
 create policy "harugyeol published posts are public" on public.harugyeol_posts for select to anon using (status = 'published');
-create policy "harugyeol authenticated readers" on public.harugyeol_posts for select to authenticated using (status = 'published' or (select (auth.jwt() -> 'app_metadata' ->> 'harugyeol_role')) = 'admin');
-create policy "harugyeol admins can create posts" on public.harugyeol_posts for insert to authenticated with check ((select (auth.jwt() -> 'app_metadata' ->> 'harugyeol_role')) = 'admin');
-create policy "harugyeol admins can update posts" on public.harugyeol_posts for update to authenticated using ((select (auth.jwt() -> 'app_metadata' ->> 'harugyeol_role')) = 'admin') with check ((select (auth.jwt() -> 'app_metadata' ->> 'harugyeol_role')) = 'admin');
-create policy "harugyeol admins can delete posts" on public.harugyeol_posts for delete to authenticated using ((select (auth.jwt() -> 'app_metadata' ->> 'harugyeol_role')) = 'admin');
+create policy "harugyeol authenticated readers" on public.harugyeol_posts for select to authenticated using (status = 'published' or (((select auth.jwt()) -> 'app_metadata' ->> 'harugyeol_role') = 'admin'));
+create policy "harugyeol admins can create posts" on public.harugyeol_posts for insert to authenticated with check ((((select auth.jwt()) -> 'app_metadata' ->> 'harugyeol_role') = 'admin'));
+create policy "harugyeol admins can update posts" on public.harugyeol_posts for update to authenticated using ((((select auth.jwt()) -> 'app_metadata' ->> 'harugyeol_role') = 'admin')) with check ((((select auth.jwt()) -> 'app_metadata' ->> 'harugyeol_role') = 'admin'));
+create policy "harugyeol admins can delete posts" on public.harugyeol_posts for delete to authenticated using ((((select auth.jwt()) -> 'app_metadata' ->> 'harugyeol_role') = 'admin'));
 
 create or replace function public.set_harugyeol_post_updated_at()
 returns trigger language plpgsql security invoker set search_path = '' as $$
