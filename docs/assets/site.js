@@ -1,5 +1,5 @@
-const SUPABASE_URL = "https://csecbjuldrlpgjcegmgj.supabase.co";
-const SUPABASE_KEY = "sb_publishable_rHMkjXgLlqkAvueNCWeF5w_PgppTQQM";
+const SUPABASE_URL = "https://dikjsgxlijnsvpyclbyb.supabase.co";
+const SUPABASE_KEY = "sb_publishable_T0w2q8uzzxEVX8KOE7HA1A_hruO35mS";
 const POSTS_TABLE = "harugyeol_posts";
 const SESSION_KEY = "harugyeol_admin_session";
 const STATIC_SLUGS = new Set([
