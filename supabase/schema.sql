@@ -44,3 +44,19 @@ $$;
 
 create trigger set_harugyeol_posts_updated_at before update on public.harugyeol_posts for each row execute function public.set_harugyeol_post_updated_at();
 revoke all on function public.set_harugyeol_post_updated_at() from public, anon, authenticated;
+
+-- 무인 발행용 개인키는 로컬에만 두고 서버에는 공개키만 보관합니다.
+-- 공개 클라이언트와 일반 로그인 사용자는 이 테이블에 접근할 수 없습니다.
+create table if not exists public.harugyeol_automation_tokens (
+  id text primary key,
+  token_hash text unique check (token_hash ~ '^[a-f0-9]{64}$'),
+  public_key_pem text unique,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  last_used_at timestamptz,
+  constraint harugyeol_automation_auth_method check (num_nonnulls(token_hash, public_key_pem) = 1)
+);
+
+alter table public.harugyeol_automation_tokens enable row level security;
+revoke all on table public.harugyeol_automation_tokens from public, anon, authenticated;
+grant select, update on table public.harugyeol_automation_tokens to service_role;
