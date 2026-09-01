@@ -2,18 +2,6 @@ const SUPABASE_URL = "https://dikjsgxlijnsvpyclbyb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_T0w2q8uzzxEVX8KOE7HA1A_hruO35mS";
 const POSTS_TABLE = "harugyeol_posts";
 const SESSION_KEY = "harugyeol_admin_session";
-const STATIC_SLUGS = new Set([
-  "15-minute-entryway-reset",
-  "fridge-map-reduce-food-waste",
-  "30-minute-weekly-cleaning-route",
-  "soft-towels-wash-and-dry",
-  "small-kitchen-work-triangle",
-  "seasonal-closet-switch-checklist",
-  "paper-receipt-home-file-system",
-  "10-minute-evening-reset",
-  "20-minute-guest-ready-home",
-  "five-questions-before-buying-home-tools",
-]);
 
 const escapeHtml = (value = "") => String(value)
   .replaceAll("&", "&amp;")
@@ -29,7 +17,7 @@ const formatDate = (value) => new Intl.DateTimeFormat("ko-KR", {
 }).format(new Date(value));
 
 function postHref(post) {
-  return STATIC_SLUGS.has(post.slug) ? `/articles/${post.slug}/` : `/article/?slug=${encodeURIComponent(post.slug)}`;
+  return `/articles/${encodeURIComponent(post.slug)}/`;
 }
 
 function cardMarkup(post, filterable = true) {
@@ -95,19 +83,6 @@ function setupFilters() {
   filter();
 }
 
-async function hydrateArticleList() {
-  const grid = document.querySelector("[data-remote-articles]");
-  if (!grid) return;
-  try {
-    const posts = await publicPosts();
-    if (!posts.length) return;
-    grid.innerHTML = posts.map((post) => cardMarkup(post)).join("");
-    setupFilters();
-  } catch {
-    // 정적 게시글을 그대로 유지해 사이트가 항상 읽히도록 합니다.
-  }
-}
-
 async function hydrateStaticArticle() {
   const root = document.querySelector("[data-live-article]");
   if (!root) return;
@@ -150,8 +125,7 @@ async function loadDynamicArticle() {
   try {
     const posts = await publicPosts(`&slug=eq.${encodeURIComponent(slug)}&limit=1`);
     if (!posts[0]) throw new Error("not-found");
-    shell.innerHTML = articleMarkup(posts[0]);
-    document.title = `${posts[0].title} | 하루결`;
+    location.replace(postHref(posts[0]));
   } catch {
     shell.innerHTML = '<div class="not-found"><span>404</span><h1>공개된 글을 찾을 수 없습니다.</h1><a class="primary-button" href="/articles/">모든 글 보기</a></div>';
   }
@@ -379,7 +353,6 @@ function setupAdmin() {
 
 setupNavigation();
 setupFilters();
-hydrateArticleList();
 hydrateStaticArticle();
 loadDynamicArticle();
 setupAdmin();

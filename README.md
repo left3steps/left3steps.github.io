@@ -15,8 +15,9 @@ npm test
 
 - 관리자 주소: `https://left3steps.github.io/admin/`
 - 게시글 저장소: Supabase의 `public.harugyeol_posts`
-- 공개 목록과 기존 10개 글은 Supabase의 발행 상태를 브라우저에서 동기화합니다.
-- 새 글은 `/article/?slug=...` 주소로 열립니다.
+- 공개 글은 빌드할 때 Supabase의 발행 상태를 읽어 각각 `/articles/{slug}/` 정적 페이지로 생성합니다.
+- 제목, 본문, canonical, Article 구조화 데이터와 사이트맵이 같은 빌드에서 동기화됩니다.
+- GitHub Actions가 매시간 새 공개 글을 정적 페이지로 반영합니다.
 - 브라우저에는 공개용 publishable key만 포함하며, 쓰기는 RLS와 `app_metadata.harugyeol_role = admin`으로 제한합니다.
 
 Google AdSense 게시자 `pub-1146138210876381`의 사이트 확인 메타 태그, 로더 스크립트, `ads.txt`를 포함합니다.

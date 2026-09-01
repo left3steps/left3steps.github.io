@@ -1,9 +1,12 @@
-import { copyFile, mkdir, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, rm, writeFile } from "node:fs/promises";
 import { seedPosts } from "./data/posts.mjs";
 
 const ORIGIN = "https://left3steps.github.io";
 const ADSENSE_CLIENT = "ca-pub-1146138210876381";
 const OUT = new URL("./docs/", import.meta.url);
+const SUPABASE_URL = "https://dikjsgxlijnsvpyclbyb.supabase.co";
+const SUPABASE_KEY = "sb_publishable_T0w2q8uzzxEVX8KOE7HA1A_hruO35mS";
+const POSTS_TABLE = "harugyeol_posts";
 
 const escapeHtml = (value = "") => String(value)
   .replaceAll("&", "&amp;")
@@ -12,11 +15,56 @@ const escapeHtml = (value = "") => String(value)
   .replaceAll('"', "&quot;")
   .replaceAll("'", "&#039;");
 
-const formatDate = (value) => new Intl.DateTimeFormat("ko-KR", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-}).format(new Date(`${value}T00:00:00+09:00`));
+const formatDate = (value) => {
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? new Date(`${value}T00:00:00+09:00`)
+    : new Date(value);
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(date);
+};
+
+function normalizePost(post) {
+  return {
+    id: post.id,
+    slug: post.slug,
+    title: post.title,
+    excerpt: post.excerpt,
+    category: post.category,
+    publishedAt: post.published_at || post.publishedAt,
+    updatedAt: post.updated_at || post.updatedAt || post.published_at || post.publishedAt,
+    readingMinutes: Number(post.reading_minutes || post.readingMinutes || 5),
+    featured: Boolean(post.featured),
+    accent: post.accent || "sage",
+    intro: post.intro,
+    status: post.status,
+    sections: Array.isArray(post.sections) ? post.sections : [],
+  };
+}
+
+async function loadPublishedPosts() {
+  if (process.env.HARUGYEOL_USE_SEED === "1") return seedPosts.map(normalizePost);
+  const query = new URLSearchParams({
+    select: "id,title,slug,excerpt,category,intro,sections,accent,reading_minutes,featured,status,published_at,updated_at",
+    status: "eq.published",
+    order: "published_at.desc",
+  });
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${POSTS_TABLE}?${query}`, {
+      headers: { apikey: SUPABASE_KEY },
+    });
+    if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
+    const remotePosts = await response.json();
+    if (!remotePosts.length) throw new Error("No published posts were returned");
+    return remotePosts.map(normalizePost);
+  } catch (error) {
+    if (process.env.HARUGYEOL_REQUIRE_REMOTE === "1") throw error;
+    console.warn(`Remote posts unavailable; using seed content: ${error.message}`);
+    return seedPosts.map(normalizePost);
+  }
+}
 
 async function output(path, contents) {
   const target = new URL(path, OUT);
@@ -94,8 +142,8 @@ function card(post, filterable = false) {
 }
 
 function home() {
-  const featured = seedPosts.filter((post) => post.featured).slice(0, 3);
-  const latest = seedPosts.filter((post) => !featured.some((item) => item.id === post.id)).slice(0, 6);
+  const featured = posts.filter((post) => post.featured).slice(0, 3);
+  const latest = posts.filter((post) => !featured.some((item) => item.id === post.id)).slice(0, 6);
   return document({
     title: "하루결",
     description: "작은 집에서도 오래 유지되는 정리, 청소, 주방 동선과 생활 루틴을 소개합니다.",
@@ -108,24 +156,24 @@ function home() {
     <section class="section-shell"><div class="section-heading"><div><span class="section-number">01</span><h2>먼저 읽어볼 이야기</h2></div><p>가장 자주 마주치는 생활의 불편부터 골랐습니다.</p></div><div class="article-grid">${featured.map((post) => card(post)).join("")}</div></section>
     <section class="manifesto-band"><div class="manifesto-inner"><span>하루결의 기준</span><blockquote>“좋은 살림은 더 많이 가지는 일이 아니라,<br>덜 망설이고 편하게 움직이는 일.”</blockquote><a href="/editorial-policy/">콘텐츠를 만드는 원칙 보기 →</a></div></section>
     <section class="section-shell"><div class="section-heading"><div><span class="section-number">02</span><h2>최근 생활 안내서</h2></div><a class="text-button" href="/articles/">모든 글 보기 <span aria-hidden="true">→</span></a></div><div class="article-grid latest-grid">${latest.map((post) => card(post)).join("")}</div></section>
-    <section class="newsletter-shell"><div><span class="kicker">Weekly note</span><h2>주말에 한 가지씩,<br>집의 흐름을 바꿔보세요.</h2></div><div class="newsletter-copy"><p>새 글은 매주 한 편씩 발행합니다. 과장된 비법보다 실제로 반복할 수 있는 방법을 담겠습니다.</p><a class="primary-button light" href="/articles/">지금 10편 모두 읽기</a></div></section>`,
+    <section class="newsletter-shell"><div><span class="kicker">Living note</span><h2>한 번에 한 가지씩,<br>집의 흐름을 바꿔보세요.</h2></div><div class="newsletter-copy"><p>과장된 비법보다 실제로 반복할 수 있는 방법을 꾸준히 담겠습니다.</p><a class="primary-button light" href="/articles/">지금 ${posts.length}편 모두 읽기</a></div></section>`,
   });
 }
 
 function articles() {
-  const categories = ["전체", ...new Set(seedPosts.map((post) => post.category))];
+  const categories = ["전체", ...new Set(posts.map((post) => post.category))];
   return document({
     title: "모든 생활 안내서",
     description: "정리, 청소, 주방과 생활 루틴에 관한 하루결의 모든 글을 찾아보세요.",
     path: "/articles/",
     content: `<div class="page-shell articles-page"><div class="page-intro"><span class="kicker">Living library</span><h1>생활 안내서</h1><p>집을 돌보는 일이 버겁지 않도록, 바로 적용할 수 있는 순서와 기준으로 정리했습니다.</p></div>
       <div class="filter-panel"><div class="search-box"><label class="sr-only" for="article-search">글 검색</label><input id="article-search" type="search" placeholder="제목이나 내용으로 검색" data-article-search></div><div class="category-tabs">${categories.map((name, index) => `<button class="${index === 0 ? "active" : ""}" type="button" data-category="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join("")}</div></div>
-      <p class="result-count" data-result-count>총 ${seedPosts.length}편의 글</p><div class="article-grid all-articles-grid" data-remote-articles>${seedPosts.map((post) => card(post, true)).join("")}</div><div class="empty-results" data-empty-results>검색 조건에 맞는 글이 없습니다.</div></div>`,
+      <p class="result-count" data-result-count>총 ${posts.length}편의 글</p><div class="article-grid all-articles-grid">${posts.map((post) => card(post, true)).join("")}</div><div class="empty-results" data-empty-results>검색 조건에 맞는 글이 없습니다.</div></div>`,
   });
 }
 
 function article(post) {
-  const related = seedPosts.filter((item) => item.id !== post.id && item.category === post.category).slice(0, 2);
+  const related = posts.filter((item) => item.id !== post.id && item.category === post.category).slice(0, 2);
   const schema = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -247,16 +295,19 @@ function infoPage(slug, page) {
   });
 }
 
+const posts = await loadPublishedPosts();
+
+await rm(new URL("articles/", OUT), { recursive: true, force: true });
 await output("index.html", home());
 await output("articles/index.html", articles());
 await output("article/index.html", dynamicArticle());
 await output("admin/index.html", adminPage());
-for (const post of seedPosts) await output(`articles/${post.slug}/index.html`, article(post));
+for (const post of posts) await output(`articles/${post.slug}/index.html`, article(post));
 for (const [slug, page] of Object.entries(pages)) await output(`${slug}/index.html`, infoPage(slug, page));
 await output("404.html", document({ title: "페이지를 찾을 수 없습니다", description: "요청하신 페이지가 없습니다.", path: "/404.html", noindex: true, content: `<div class="not-found"><span>404</span><h1>페이지를 찾을 수 없습니다.</h1><p>주소가 바뀌었거나 삭제된 페이지입니다.</p><a class="primary-button" href="/">홈으로 돌아가기</a></div>` }));
 await output("robots.txt", `User-agent: *\nAllow: /\n\nSitemap: ${ORIGIN}/sitemap.xml\n`);
 await output("ads.txt", `google.com, pub-1146138210876381, DIRECT, f08c47fec0942fa0\n`);
-await output("sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${["/", "/articles/", "/about/", "/editorial-policy/", "/privacy/", "/terms/", ...seedPosts.map((post) => `/articles/${post.slug}/`)].map((path) => `<url><loc>${ORIGIN}${path}</loc></url>`).join("")}</urlset>\n`);
+await output("sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${["/", "/articles/", "/about/", "/editorial-policy/", "/privacy/", "/terms/", ...posts.map((post) => `/articles/${post.slug}/`)].map((path) => `<url><loc>${ORIGIN}${path}</loc></url>`).join("")}</urlset>\n`);
 await output(".nojekyll", "");
 await mkdir(new URL("assets/", OUT), { recursive: true });
 await Promise.all([
@@ -265,4 +316,4 @@ await Promise.all([
   copyFile(new URL("assets/og.png", import.meta.url), new URL("assets/og.png", OUT)),
 ]);
 
-console.log(`Generated ${seedPosts.length + 9} pages in docs/`);
+console.log(`Generated ${posts.length + 9} pages from ${posts.length} published posts in docs/`);
