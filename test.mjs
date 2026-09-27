@@ -25,6 +25,7 @@ const required = [
   "docs/terms/index.html",
   "docs/robots.txt",
   "docs/ads.txt",
+  "docs/google24b793f83e74c099.html",
   "docs/sitemap.xml",
   ...articleDirectories.map((slug) => `docs/articles/${slug}/index.html`),
 ];
@@ -35,6 +36,7 @@ const list = await readFile(new URL("docs/articles/index.html", import.meta.url)
 const admin = await readFile(new URL("docs/admin/index.html", import.meta.url), "utf8");
 const client = await readFile(new URL("docs/assets/site.js", import.meta.url), "utf8");
 const ads = await readFile(new URL("docs/ads.txt", import.meta.url), "utf8");
+const searchVerification = await readFile(new URL("docs/google24b793f83e74c099.html", import.meta.url), "utf8");
 const schema = await readFile(new URL("supabase/schema.sql", import.meta.url), "utf8");
 const publisher = await readFile(new URL("supabase/functions/harugyeol-publish/index.ts", import.meta.url), "utf8");
 const publisherClient = await readFile(new URL("scripts/publish-post.mjs", import.meta.url), "utf8");
@@ -58,6 +60,7 @@ if (!start.includes("상황별 시작점") || !start.includes("내 시간에 맞
 if (!planner.includes("data-planner-form") || !client.includes("setupPlanner")) throw new Error("Interactive planner is incomplete");
 if (!about.includes("left3steps") || !about.includes("nature@left3steps.com")) throw new Error("Publisher identity and contact are incomplete");
 if (!ads.includes('pub-1146138210876381')) throw new Error("ads.txt is incomplete");
+if (!searchVerification.includes("google-site-verification")) throw new Error("Search Console verification is incomplete");
 if (articles.some((page) => page.includes('<meta name="robots" content="noindex">'))) throw new Error("Published articles must be indexable");
 if (articles.some((page) => !page.includes('type="application/ld+json"') || !page.includes("pagead2.googlesyndication.com"))) throw new Error("Published article metadata is incomplete");
 if (articleDirectories.some((slug) => !sitemap.includes(`https://left3steps.github.io/articles/${slug}/`))) throw new Error("Sitemap is missing a published article");

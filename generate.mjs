@@ -9,6 +9,7 @@ const SUPABASE_KEY = "sb_publishable_T0w2q8uzzxEVX8KOE7HA1A_hruO35mS";
 const POSTS_TABLE = "harugyeol_posts";
 const SITE_EMAIL = "nature@left3steps.com";
 const SITE_REVIEW_DATE = "2026-09-28";
+const SEARCH_CONSOLE_FILE = "google24b793f83e74c099.html";
 const CATEGORY_GUIDES = [
   { name: "정리", slug: "organizing", accent: "sage", summary: "물건을 버리는 일보다 다시 찾고 되돌려 놓기 쉬운 자리를 만드는 방법", start: "자주 흩어지는 한 종류의 물건부터 시작하세요." },
   { name: "청소", slug: "cleaning", accent: "sky", summary: "한 번에 몰아서 하지 않고 오염의 순서와 동선을 줄이는 청소 방법", start: "마른 먼지를 먼저 걷고 젖은 청소를 나중에 하세요." },
@@ -379,6 +380,7 @@ for (const [slug, page] of Object.entries(pages)) await output(`${slug}/index.ht
 await output("404.html", document({ title: "페이지를 찾을 수 없습니다", description: "요청하신 페이지가 없습니다.", path: "/404.html", noindex: true, content: `<div class="not-found"><span>404</span><h1>페이지를 찾을 수 없습니다.</h1><p>주소가 바뀌었거나 삭제된 페이지입니다.</p><a class="primary-button" href="/">홈으로 돌아가기</a></div>` }));
 await output("robots.txt", `User-agent: *\nAllow: /\n\nSitemap: ${ORIGIN}/sitemap.xml\n`);
 await output("ads.txt", `google.com, pub-1146138210876381, DIRECT, f08c47fec0942fa0\n`);
+await output(SEARCH_CONSOLE_FILE, `google-site-verification: ${SEARCH_CONSOLE_FILE}\n`);
 const staticSitemapPaths = ["/", "/start/", "/articles/", "/tools/weekly-reset-planner/", "/about/", "/contact/", "/editorial-policy/", "/privacy/", "/terms/", ...CATEGORY_GUIDES.map((guide) => `/categories/${guide.slug}/`)];
 await output("sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${staticSitemapPaths.map((path) => `<url><loc>${ORIGIN}${path}</loc><lastmod>${SITE_REVIEW_DATE}</lastmod></url>`).join("")}${posts.map((post) => `<url><loc>${ORIGIN}/articles/${post.slug}/</loc><lastmod>${String(post.updatedAt || post.publishedAt).slice(0, 10)}</lastmod></url>`).join("")}</urlset>\n`);
 await output(".nojekyll", "");
