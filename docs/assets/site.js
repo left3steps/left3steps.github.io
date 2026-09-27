@@ -31,7 +31,7 @@ function cardMarkup(post, filterable = true) {
 
 function sectionsMarkup(post) {
   const sections = Array.isArray(post.sections) ? post.sections : [];
-  return `<p class="article-lead">${escapeHtml(post.intro)}</p>${sections.map((section, index) => `<section><span class="section-index">${String(index + 1).padStart(2, "0")}</span><h2>${escapeHtml(section.heading)}</h2>${(section.paragraphs || []).map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}${section.checklist?.length ? `<div class="checklist-box"><strong>바로 해보기</strong><ul>${section.checklist.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>` : ""}</section>`).join("")}<div class="article-note"><strong>편집 메모</strong><p>집의 크기와 가족 구성에 따라 맞는 방법은 달라질 수 있습니다. 한 번에 모두 바꾸기보다 가장 불편한 한 지점부터 시험해보세요.</p></div>`;
+  return `<p class="article-lead">${escapeHtml(post.intro)}</p>${sections.map((section, index) => `<section id="section-${index + 1}"><span class="section-index">${String(index + 1).padStart(2, "0")}</span><h2>${escapeHtml(section.heading)}</h2>${(section.paragraphs || []).map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}${section.checklist?.length ? `<div class="checklist-box"><strong>바로 해보기</strong><ul>${section.checklist.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>` : ""}</section>`).join("")}<div class="article-note"><strong>편집 메모</strong><p>집의 크기와 가족 구성에 따라 맞는 방법은 달라질 수 있습니다. 한 번에 모두 바꾸기보다 가장 불편한 한 지점부터 시험해보세요.</p><a href="/contact/?subject=${encodeURIComponent(post.title || "콘텐츠 정정 요청")}">이 글의 오류·개선점 알리기 →</a></div>`;
 }
 
 async function publicPosts(query = "") {
@@ -98,7 +98,7 @@ async function hydrateStaticArticle() {
     root.querySelector("[data-live-intro]").textContent = post.intro;
     const time = root.querySelector("[data-live-date]");
     time.dateTime = post.published_at;
-    time.textContent = formatDate(post.published_at);
+    time.textContent = `발행 ${formatDate(post.published_at)}`;
     const hero = root.querySelector("[data-live-hero]");
     hero.className = `article-hero accent-${post.accent || "sage"}`;
     root.querySelector("[data-live-content]").innerHTML = sectionsMarkup(post);
@@ -106,6 +106,51 @@ async function hydrateStaticArticle() {
   } catch {
     // 생성 시점의 정적 본문을 대체 콘텐츠로 유지합니다.
   }
+}
+
+const PLANNER_TASKS = {
+  "현관": "신발과 바닥 물건을 제자리·다른 방·보류 세 갈래로 나눕니다.",
+  "주방": "조리대 위 물건을 비우고 자주 쓰는 도구만 손이 닿는 자리에 남깁니다.",
+  "거실": "바닥과 탁자 위 물건을 먼저 걷은 뒤 눈에 보이는 먼지를 닦습니다.",
+  "세탁 공간": "세탁물·빈 바구니·건조할 물건의 자리를 나누고 바닥을 비웁니다.",
+  "침실": "침대 주변과 의자 위 옷을 오늘 입을 것·세탁할 것·보관할 것으로 나눕니다.",
+};
+
+function setupPlanner() {
+  const form = document.querySelector("[data-planner-form]");
+  const result = document.querySelector("[data-planner-result]");
+  if (!form || !result) return;
+  const energyLabel = { low: "가볍게", steady: "차분하게", focus: "집중해서" };
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const minutes = Number(data.get("minutes") || 10);
+    const energy = String(data.get("energy") || "steady");
+    const zones = data.getAll("zones").map(String);
+    if (!zones.length) {
+      result.innerHTML = '<span class="kicker">Your plan</span><h2>공간을 하나 골라주세요.</h2><p>가장 자주 눈에 띄는 곳 한 곳이면 충분합니다.</p>';
+      result.focus();
+      return;
+    }
+    const activeZones = zones.slice(0, minutes === 10 ? 1 : minutes === 20 ? 2 : 3);
+    const prep = 2;
+    const finish = minutes <= 10 ? 2 : 3;
+    const work = minutes - prep - finish;
+    const each = Math.max(4, Math.floor(work / activeZones.length));
+    const remainder = Math.max(0, work - (each * activeZones.length));
+    result.innerHTML = `<span class="kicker">Your plan</span><h2>${minutes}분 · ${activeZones.join(" + ")} 리셋</h2><p>${energyLabel[energy]} 움직일 수 있도록 준비 ${prep}분, 실행 ${work}분, 마무리 ${finish}분으로 나눴습니다.</p><ol><li><strong>${prep}분 · 시작선 만들기</strong><span>봉투 하나와 마른 천을 준비하고 타이머를 켭니다. 새 수납용품은 꺼내지 않습니다.</span></li>${activeZones.map((zone, index) => `<li><strong>${each + (index < remainder ? 1 : 0)}분 · ${escapeHtml(zone)}</strong><span>${escapeHtml(PLANNER_TASKS[zone])}</span></li>`).join("")}<li><strong>${finish}분 · 다음 행동 남기기</strong><span>보류 물건 한 개만 결정하고 사용한 도구를 되돌려 놓습니다. 시간이 끝나면 범위를 넓히지 않습니다.</span></li></ol><button class="text-button planner-print" type="button" data-planner-print>계획 인쇄하기</button>`;
+    result.querySelector("[data-planner-print]")?.addEventListener("click", () => window.print());
+    result.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  result.querySelector("[data-planner-print]")?.addEventListener("click", () => window.print());
+}
+
+function setupContactLink() {
+  const link = document.querySelector("[data-contact-link]");
+  if (!link) return;
+  const subject = new URLSearchParams(location.search).get("subject");
+  if (subject) link.href = `mailto:nature@left3steps.com?subject=${encodeURIComponent(`하루결 정정 요청: ${subject}`)}`;
 }
 
 function articleMarkup(post) {
@@ -356,3 +401,5 @@ setupFilters();
 hydrateStaticArticle();
 loadDynamicArticle();
 setupAdmin();
+setupPlanner();
+setupContactLink();

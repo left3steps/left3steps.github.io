@@ -9,6 +9,14 @@ const articleDirectories = (await readdir(new URL("docs/articles/", import.meta.
 const required = [
   "docs/index.html",
   "docs/articles/index.html",
+  "docs/start/index.html",
+  "docs/tools/weekly-reset-planner/index.html",
+  "docs/contact/index.html",
+  "docs/categories/organizing/index.html",
+  "docs/categories/cleaning/index.html",
+  "docs/categories/kitchen/index.html",
+  "docs/categories/routines/index.html",
+  "docs/categories/home-tools/index.html",
   "docs/article/index.html",
   "docs/admin/index.html",
   "docs/about/index.html",
@@ -31,6 +39,9 @@ const schema = await readFile(new URL("supabase/schema.sql", import.meta.url), "
 const publisher = await readFile(new URL("supabase/functions/harugyeol-publish/index.ts", import.meta.url), "utf8");
 const publisherClient = await readFile(new URL("scripts/publish-post.mjs", import.meta.url), "utf8");
 const sitemap = await readFile(new URL("docs/sitemap.xml", import.meta.url), "utf8");
+const start = await readFile(new URL("docs/start/index.html", import.meta.url), "utf8");
+const planner = await readFile(new URL("docs/tools/weekly-reset-planner/index.html", import.meta.url), "utf8");
+const about = await readFile(new URL("docs/about/index.html", import.meta.url), "utf8");
 const articles = await Promise.all(articleDirectories.map((slug) => readFile(new URL(`docs/articles/${slug}/index.html`, import.meta.url), "utf8")));
 
 if (!home.includes("완벽한 집보다") || !home.includes("하루결")) throw new Error("Home content is incomplete");
@@ -42,10 +53,15 @@ if (!admin.includes("처음 접속 또는 비밀번호 설정") || !admin.includ
 if (!client.includes("harugyeol_posts") || !client.includes("sb_publishable_")) throw new Error("Supabase client is not configured");
 if (/service_role|sb_secret_/.test(client)) throw new Error("A secret Supabase key must not be shipped to the browser");
 if (!home.includes('google-adsense-account') || !home.includes('ca-pub-1146138210876381')) throw new Error("AdSense verification is missing");
+if (!home.includes("필요한 주제부터 찾기") || !home.includes("생활 계획 만들기")) throw new Error("Home curation paths are incomplete");
+if (!start.includes("상황별 시작점") || !start.includes("내 시간에 맞는 계획 만들기")) throw new Error("Start guide is incomplete");
+if (!planner.includes("data-planner-form") || !client.includes("setupPlanner")) throw new Error("Interactive planner is incomplete");
+if (!about.includes("left3steps") || !about.includes("nature@left3steps.com")) throw new Error("Publisher identity and contact are incomplete");
 if (!ads.includes('pub-1146138210876381')) throw new Error("ads.txt is incomplete");
 if (articles.some((page) => page.includes('<meta name="robots" content="noindex">'))) throw new Error("Published articles must be indexable");
 if (articles.some((page) => !page.includes('type="application/ld+json"') || !page.includes("pagead2.googlesyndication.com"))) throw new Error("Published article metadata is incomplete");
 if (articleDirectories.some((slug) => !sitemap.includes(`https://left3steps.github.io/articles/${slug}/`))) throw new Error("Sitemap is missing a published article");
+if (!["organizing", "cleaning", "kitchen", "routines", "home-tools"].every((slug) => sitemap.includes(`https://left3steps.github.io/categories/${slug}/`))) throw new Error("Sitemap is missing a category guide");
 if (!schema.includes("harugyeol_automation_tokens") || !schema.includes("enable row level security")) throw new Error("Automation token schema is incomplete");
 if (!publisher.includes("x-harugyeol-signature") || !publisher.includes('status: "published"')) throw new Error("Automated publisher is incomplete");
 if (/sb_secret_|service_role/i.test(publisherClient)) throw new Error("Publisher client must not contain a Supabase secret key");
