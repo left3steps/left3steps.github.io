@@ -8,7 +8,7 @@ const SUPABASE_URL = "https://dikjsgxlijnsvpyclbyb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_T0w2q8uzzxEVX8KOE7HA1A_hruO35mS";
 const POSTS_TABLE = "harugyeol_posts";
 const SITE_EMAIL = "nature@left3steps.com";
-const SITE_REVIEW_DATE = "2026-09-28";
+const SITE_REVIEW_DATE = "2026-10-01";
 const SEARCH_CONSOLE_FILE = "google24b793f83e74c099.html";
 const CATEGORY_GUIDES = [
   { name: "정리", slug: "organizing", accent: "sage", summary: "물건을 버리는 일보다 다시 찾고 되돌려 놓기 쉬운 자리를 만드는 방법", start: "자주 흩어지는 한 종류의 물건부터 시작하세요." },
@@ -19,6 +19,34 @@ const CATEGORY_GUIDES = [
 ];
 
 const categoryGuide = (name) => CATEGORY_GUIDES.find((item) => item.name === name);
+
+const RELATED_STOPWORDS = new Set([
+  "하는", "위한", "있습니다", "없습니다", "방법", "정리", "청소", "주방", "루틴", "살림", "도구", "생활", "가을", "여름", "겨울", "봄", "분", "가지",
+]);
+
+function postTokens(post) {
+  return new Set(`${post.title} ${post.excerpt}`
+    .toLowerCase()
+    .replace(/[^0-9a-z가-힣\s]/g, " ")
+    .split(/\s+/)
+    .filter((token) => token.length >= 2 && !RELATED_STOPWORDS.has(token)));
+}
+
+function relatedPostsFor(post) {
+  const tokens = postTokens(post);
+  const ranked = posts
+    .filter((item) => item.id !== post.id)
+    .map((item) => {
+      const shared = [...postTokens(item)].filter((token) => tokens.has(token)).length;
+      const sameCategory = item.category === post.category;
+      const similarLength = Math.abs(item.readingMinutes - post.readingMinutes) <= 1;
+      return { item, score: (sameCategory ? 8 : 0) + shared * 3 + (similarLength ? 1 : 0) };
+    })
+    .sort((a, b) => b.score - a.score || new Date(b.item.publishedAt) - new Date(a.item.publishedAt));
+  const sameCategory = ranked.filter(({ item }) => item.category === post.category).slice(0, 2);
+  const nextTopic = ranked.find(({ item }) => item.category !== post.category);
+  return [...sameCategory, ...(nextTopic ? [nextTopic] : [])].map(({ item }) => item);
+}
 
 const escapeHtml = (value = "") => String(value)
   .replaceAll("&", "&amp;")
@@ -139,16 +167,16 @@ function footer() {
     <div class="footer-links"><span>둘러보기</span><a href="/start/">처음이라면</a><a href="/articles/">모든 글</a><a href="/tools/weekly-reset-planner/">생활 계획 도구</a></div>
     <div class="footer-links"><span>운영 정보</span><a href="/about/">소개</a><a href="/contact/">문의·정정 요청</a><a href="/editorial-policy/">편집 원칙</a><a href="/privacy/">개인정보처리방침</a><a href="/terms/">이용약관</a></div>
   </div>
-  <div class="footer-bottom"><span>© 2026 하루결. All rights reserved.</span><span class="site-updated">마지막 사이트 검토: 2026년 9월 28일</span></div>
+  <div class="footer-bottom"><span>© 2026 하루결. All rights reserved.</span><span class="site-updated">마지막 사이트 검토: ${formatDate(SITE_REVIEW_DATE)}</span></div>
 </footer>`;
 }
 
-function card(post, filterable = false) {
+function card(post, filterable = false, context = "") {
   const attrs = filterable ? ` data-article-card data-article-category="${escapeHtml(post.category)}"` : "";
   return `<article class="article-card accent-${post.accent}"${attrs}>
   <a href="/articles/${post.slug}/" aria-label="${escapeHtml(post.title)} 읽기">
     <div class="card-art" aria-hidden="true"><span class="art-line art-line-one"></span><span class="art-line art-line-two"></span><span class="art-dot"></span></div>
-    <div class="card-body"><div class="eyebrow-row"><span>${escapeHtml(post.category)}</span><span>${post.readingMinutes}분 읽기</span></div><h3>${escapeHtml(post.title)}</h3><p>${escapeHtml(post.excerpt)}</p><span class="read-link">글 읽기 <span aria-hidden="true">→</span></span></div>
+    <div class="card-body">${context ? `<span class="card-context">${escapeHtml(context)}</span>` : ""}<div class="eyebrow-row"><span>${escapeHtml(post.category)}</span><span>${post.readingMinutes}분 읽기</span></div><h3>${escapeHtml(post.title)}</h3><p>${escapeHtml(post.excerpt)}</p><span class="read-link">글 읽기 <span aria-hidden="true">→</span></span></div>
   </a>
 </article>`;
 }
@@ -157,6 +185,12 @@ function home() {
   const selectedFeatured = posts.filter((post) => post.featured).slice(0, 3);
   const featured = selectedFeatured.length ? selectedFeatured : posts.slice(0, 3);
   const latest = posts.filter((post) => !featured.some((item) => item.id === post.id)).slice(0, 6);
+  const goalPaths = [
+    { slug: "15-minute-entryway-reset", label: "들어오자마자 물건이 쌓여요", time: "15분", copy: "현관 동선부터 바꿔 바닥과 손을 동시에 가볍게 만듭니다." },
+    { slug: "fridge-map-reduce-food-waste", label: "식재료를 자꾸 잊어버려요", time: "20분", copy: "냉장고를 먹는 순서로 나누고 장보기 전 확인할 기준을 만듭니다." },
+    { slug: "30-minute-weekly-cleaning-route", label: "청소를 어디서 시작할지 모르겠어요", time: "30분", copy: "집 전체를 같은 작업으로 한 바퀴 도는 짧은 청소 순서를 익힙니다." },
+    { slug: "store-home-tools-by-use-frequency", label: "살림도구를 찾느라 시간이 걸려요", time: "20분", copy: "사용 빈도에 따라 자리를 나눠 찾고 되돌려 놓는 시간을 줄입니다." },
+  ].map((path) => ({ ...path, post: posts.find((post) => post.slug === path.slug) })).filter((path) => path.post);
   return document({
     title: "하루결",
     description: "작은 집에서도 오래 유지되는 정리, 청소, 주방 동선과 생활 루틴을 소개합니다.",
@@ -167,6 +201,7 @@ function home() {
       <div class="hero-art" aria-hidden="true"><div class="sun-shape"></div><div class="shelf-shape"><span></span><span></span><span></span></div><div class="plant-shape"><i></i><i></i><i></i></div><div class="hero-note">오늘의 작은 변화가<br>내일의 여백이 됩니다.</div></div>
     </section>
     <section class="section-shell"><div class="section-heading"><div><span class="section-number">01</span><h2>먼저 읽어볼 이야기</h2></div><p>가장 자주 마주치는 생활의 불편부터 골랐습니다.</p></div><div class="article-grid">${featured.map((post) => card(post)).join("")}</div></section>
+    <section class="section-shell goal-section"><div class="section-heading"><div><span class="section-number">Start</span><h2>지금 겪는 불편으로 찾기</h2></div><p>검색한 문제에 가장 가까운 시작점을 골라보세요.</p></div><div class="goal-grid">${goalPaths.map(({ label, time, copy, post }) => `<a class="goal-card" href="/articles/${post.slug}/"><span>${escapeHtml(label)}</span><strong>${escapeHtml(post.title)}</strong><p>${escapeHtml(copy)}</p><small>${escapeHtml(time)}부터 시작 →</small></a>`).join("")}</div></section>
     <section class="section-shell"><div class="section-heading"><div><span class="section-number">Guide</span><h2>필요한 주제부터 찾기</h2></div><a class="text-button" href="/start/">상황별 시작점 보기 <span aria-hidden="true">→</span></a></div><div class="topic-grid">${CATEGORY_GUIDES.map((guide) => `<a class="topic-card accent-${guide.accent}" href="/categories/${guide.slug}/"><span>${escapeHtml(guide.name)}</span><p>${escapeHtml(guide.summary)}</p><strong>안내서 보기 →</strong></a>`).join("")}</div></section>
     <section class="manifesto-band"><div class="manifesto-inner"><span>하루결의 기준</span><blockquote>“좋은 살림은 더 많이 가지는 일이 아니라,<br>덜 망설이고 편하게 움직이는 일.”</blockquote><a href="/editorial-policy/">콘텐츠를 만드는 원칙 보기 →</a></div></section>
     <section class="section-shell"><div class="section-heading"><div><span class="section-number">02</span><h2>최근 생활 안내서</h2></div><a class="text-button" href="/articles/">모든 글 보기 <span aria-hidden="true">→</span></a></div><div class="article-grid latest-grid">${latest.map((post) => card(post)).join("")}</div></section>
@@ -182,6 +217,7 @@ function articles() {
     description: "정리, 청소, 주방과 생활 루틴에 관한 하루결의 모든 글을 찾아보세요.",
     path: "/articles/",
     content: `<div class="page-shell articles-page"><div class="page-intro"><span class="kicker">Living library</span><h1>생활 안내서</h1><p>집을 돌보는 일이 버겁지 않도록, 바로 적용할 수 있는 순서와 기준으로 정리했습니다. 처음 방문했다면 <a class="inline-link" href="/start/">상황별 시작점</a>에서 현재 불편에 맞는 글부터 골라보세요.</p></div>
+      <nav class="library-shortcuts" aria-label="상황별 빠른 찾기"><a href="/categories/organizing/"><span>물건이 자꾸 쌓일 때</span><strong>정리 기준 찾기 →</strong></a><a href="/categories/cleaning/"><span>짧게 청소하고 싶을 때</span><strong>청소 순서 찾기 →</strong></a><a href="/categories/kitchen/"><span>주방 동선을 줄이고 싶을 때</span><strong>주방 흐름 찾기 →</strong></a><a href="/categories/routines/"><span>꾸준히 이어가기 어려울 때</span><strong>생활 루틴 찾기 →</strong></a></nav>
       <div class="filter-panel"><div class="search-box"><label class="sr-only" for="article-search">글 검색</label><input id="article-search" type="search" placeholder="제목이나 내용으로 검색" data-article-search></div><div class="category-tabs">${categories.map((name, index) => `<button class="${index === 0 ? "active" : ""}" type="button" data-category="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join("")}</div></div>
       <p class="result-count" data-result-count>총 ${posts.length}편의 글</p><div class="article-grid all-articles-grid">${posts.map((post) => card(post, true)).join("")}</div><div class="empty-results" data-empty-results>검색 조건에 맞는 글이 없습니다.</div></div>`,
   });
@@ -226,22 +262,23 @@ function plannerPage() {
 }
 
 function article(post) {
-  const related = posts.filter((item) => item.id !== post.id && item.category === post.category).slice(0, 3);
+  const related = relatedPostsFor(post);
   const guide = categoryGuide(post.category);
+  const actionItems = post.sections.flatMap((section) => section.checklist || []).slice(0, 3);
   const updated = new Date(post.updatedAt || post.publishedAt);
   const published = new Date(post.publishedAt);
   const showUpdated = Number.isFinite(updated.getTime()) && Number.isFinite(published.getTime()) && updated.getTime() - published.getTime() > 86400000;
   const schema = {
     "@context": "https://schema.org",
-    "@type": "Article",
-    headline: post.title,
-    description: post.excerpt,
-    datePublished: post.publishedAt,
-    dateModified: post.updatedAt || post.publishedAt,
-    author: { "@type": "Organization", name: "하루결", url: `${ORIGIN}/about/` },
-    publisher: { "@type": "Organization", name: "하루결", url: ORIGIN },
-    mainEntityOfPage: `${ORIGIN}/articles/${post.slug}/`,
-    inLanguage: "ko-KR",
+    "@graph": [
+      { "@type": "Article", headline: post.title, description: post.excerpt, articleSection: post.category, datePublished: post.publishedAt, dateModified: post.updatedAt || post.publishedAt, author: { "@type": "Organization", name: "하루결", url: `${ORIGIN}/about/` }, publisher: { "@type": "Organization", name: "하루결", url: ORIGIN }, mainEntityOfPage: `${ORIGIN}/articles/${post.slug}/`, inLanguage: "ko-KR" },
+      { "@type": "BreadcrumbList", itemListElement: [
+        { "@type": "ListItem", position: 1, name: "홈", item: `${ORIGIN}/` },
+        { "@type": "ListItem", position: 2, name: "생활 안내서", item: `${ORIGIN}/articles/` },
+        { "@type": "ListItem", position: 3, name: post.category, item: guide ? `${ORIGIN}/categories/${guide.slug}/` : `${ORIGIN}/articles/` },
+        { "@type": "ListItem", position: 4, name: post.title, item: `${ORIGIN}/articles/${post.slug}/` },
+      ] },
+    ],
   };
   const sections = post.sections.map((section, index) => `<section id="section-${index + 1}"><span class="section-index">${String(index + 1).padStart(2, "0")}</span><h2>${escapeHtml(section.heading)}</h2>${section.paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}${section.checklist ? `<div class="checklist-box"><strong>바로 해보기</strong><ul>${section.checklist.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>` : ""}</section>`).join("");
   const toc = `<nav class="article-toc" aria-label="글 목차"><strong>글의 구성</strong><ol>${post.sections.map((section, index) => `<li><a href="#section-${index + 1}">${escapeHtml(section.heading)}</a></li>`).join("")}</ol></nav>`;
@@ -252,8 +289,8 @@ function article(post) {
     schema,
     content: `<article data-live-article data-post-slug="${escapeHtml(post.slug)}"><nav class="breadcrumbs" aria-label="현재 위치"><a href="/">홈</a><span>/</span><a href="/articles/">생활 안내서</a><span>/</span>${guide ? `<a href="/categories/${guide.slug}/" data-live-category>${escapeHtml(post.category)}</a>` : `<span data-live-category>${escapeHtml(post.category)}</span>`}</nav>
       <header class="article-hero accent-${post.accent}" data-live-hero><div class="article-title-wrap"><div class="eyebrow-row"><span data-live-category>${escapeHtml(post.category)}</span><span data-live-reading>${post.readingMinutes}분 읽기</span></div><h1 data-live-title>${escapeHtml(post.title)}</h1><p data-live-excerpt>${escapeHtml(post.excerpt)}</p><div class="article-byline"><a href="/about/">하루결 운영·편집</a><span><time datetime="${post.publishedAt}" data-live-date>발행 ${formatDate(post.publishedAt)}</time>${showUpdated ? ` · <time datetime="${post.updatedAt}">수정 ${formatDate(post.updatedAt)}</time>` : ""}</span></div></div><div class="article-hero-art" aria-hidden="true"><span></span><i></i><b></b></div></header>
-      <div class="article-layout"><aside class="article-aside"><span>이 글의 핵심</span><p data-live-intro>${escapeHtml(post.intro)}</p>${toc}</aside><div class="article-content" data-live-content><p class="article-lead">${escapeHtml(post.intro)}</p>${sections}<div class="article-note"><strong>편집 메모</strong><p>집의 크기와 가족 구성에 따라 맞는 방법은 달라질 수 있습니다. 한 번에 모두 바꾸기보다 가장 불편한 한 지점부터 시험해보세요.</p><a href="/contact/?subject=${encodeURIComponent(post.title)}">이 글의 오류·개선점 알리기 →</a></div></div></div></article>
-      ${related.length ? `<section class="section-shell related-section"><div class="section-heading"><div><span class="section-number">Next</span><h2>이어 읽기</h2></div></div><div class="article-grid related-grid">${related.map((item) => card(item)).join("")}</div></section>` : ""}`,
+      <div class="article-layout"><aside class="article-aside"><span>이 글의 핵심</span><p data-live-intro>${escapeHtml(post.intro)}</p>${toc}</aside><div class="article-content" data-live-content><p class="article-lead">${escapeHtml(post.intro)}</p>${actionItems.length ? `<section class="quick-answer" aria-labelledby="quick-answer-title"><span>먼저 실행할 세 가지</span><h2 id="quick-answer-title">읽기 전에 시작점을 잡아보세요</h2><ol>${actionItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol></section>` : ""}${sections}<div class="article-action"><span>오늘의 다음 행동</span><h2>${actionItems.length ? escapeHtml(actionItems[0]) : "가장 불편한 한 지점만 10분간 살펴보기"}</h2><p>한 번에 모두 바꾸지 않아도 됩니다. 가능한 시간을 고르고 이 글의 첫 단계만 생활 계획에 넣어보세요.</p><div><a class="primary-button" href="/tools/weekly-reset-planner/">내 시간에 맞는 계획 만들기</a>${guide ? `<a class="text-button" href="/categories/${guide.slug}/">${escapeHtml(post.category)} 안내서 더 보기 →</a>` : ""}</div></div><div class="article-note"><strong>검토·편집 기준</strong><p>이 글은 하루결의 <a href="/editorial-policy/">편집 원칙</a>에 따라 과장된 효과를 피하고, 집의 크기와 가족 구성에 맞춰 작은 범위부터 시험하도록 작성했습니다. 내용은 ${SITE_REVIEW_DATE.replaceAll("-", ".")}에 사이트 기준과 함께 다시 확인했습니다.</p><a href="/contact/?subject=${encodeURIComponent(post.title)}">이 글의 오류·개선점 알리기 →</a></div></div></div></article>
+      ${related.length ? `<section class="section-shell related-section"><div class="section-heading"><div><span class="section-number">Next</span><h2>다음에 읽을 안내서</h2></div><p>같은 주제를 깊게 보거나, 이어지는 생활 단계로 이동하세요.</p></div><div class="article-grid related-grid">${related.map((item) => card(item, false, item.category === post.category ? `${post.category} 이어 읽기` : `다음 생활 단계 · ${item.category}`)).join("")}</div></section>` : ""}`,
   });
 }
 

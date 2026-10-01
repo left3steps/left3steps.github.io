@@ -53,9 +53,12 @@ if (!home.includes('rel="canonical" href="https://left3steps.github.io/"')) thro
 if (!admin.includes("편집자 로그인") || !admin.includes('name="password"')) throw new Error("Admin page is incomplete");
 if (!admin.includes("처음 접속 또는 비밀번호 설정") || !admin.includes("관리자 비밀번호 설정")) throw new Error("Admin recovery flow is incomplete");
 if (!client.includes("harugyeol_posts") || !client.includes("sb_publishable_")) throw new Error("Supabase client is not configured");
+if (!client.includes("먼저 실행할 세 가지") || !client.includes("오늘의 다음 행동")) throw new Error("Live article enhancement markup is incomplete");
 if (/service_role|sb_secret_/.test(client)) throw new Error("A secret Supabase key must not be shipped to the browser");
 if (!home.includes('google-adsense-account') || !home.includes('ca-pub-1146138210876381')) throw new Error("AdSense verification is missing");
 if (!home.includes("필요한 주제부터 찾기") || !home.includes("생활 계획 만들기")) throw new Error("Home curation paths are incomplete");
+if (!home.includes("지금 겪는 불편으로 찾기") || !home.includes("식재료를 자꾸 잊어버려요")) throw new Error("Goal-based discovery paths are incomplete");
+if (!list.includes("상황별 빠른 찾기") || !list.includes("주방 동선을 줄이고 싶을 때")) throw new Error("Article library shortcuts are incomplete");
 if (!start.includes("상황별 시작점") || !start.includes("내 시간에 맞는 계획 만들기")) throw new Error("Start guide is incomplete");
 if (!planner.includes("data-planner-form") || !client.includes("setupPlanner")) throw new Error("Interactive planner is incomplete");
 if (!about.includes("left3steps") || !about.includes("nature@left3steps.com")) throw new Error("Publisher identity and contact are incomplete");
@@ -63,6 +66,7 @@ if (!ads.includes('pub-1146138210876381')) throw new Error("ads.txt is incomplet
 if (!searchVerification.includes("google-site-verification")) throw new Error("Search Console verification is incomplete");
 if (articles.some((page) => page.includes('<meta name="robots" content="noindex">'))) throw new Error("Published articles must be indexable");
 if (articles.some((page) => !page.includes('type="application/ld+json"') || !page.includes("pagead2.googlesyndication.com"))) throw new Error("Published article metadata is incomplete");
+if (articles.some((page) => !page.includes("먼저 실행할 세 가지") || !page.includes("오늘의 다음 행동") || !page.includes('"BreadcrumbList"'))) throw new Error("Article engagement paths are incomplete");
 if (articleDirectories.some((slug) => !sitemap.includes(`https://left3steps.github.io/articles/${slug}/`))) throw new Error("Sitemap is missing a published article");
 if (!["organizing", "cleaning", "kitchen", "routines", "home-tools"].every((slug) => sitemap.includes(`https://left3steps.github.io/categories/${slug}/`))) throw new Error("Sitemap is missing a category guide");
 if (!schema.includes("harugyeol_automation_tokens") || !schema.includes("enable row level security")) throw new Error("Automation token schema is incomplete");

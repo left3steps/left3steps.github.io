@@ -2,6 +2,8 @@ const SUPABASE_URL = "https://dikjsgxlijnsvpyclbyb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_T0w2q8uzzxEVX8KOE7HA1A_hruO35mS";
 const POSTS_TABLE = "harugyeol_posts";
 const SESSION_KEY = "harugyeol_admin_session";
+const SITE_REVIEW_DATE = "2026.10.01";
+const CATEGORY_SLUGS = { "정리": "organizing", "청소": "cleaning", "주방": "kitchen", "루틴": "routines", "살림도구": "home-tools" };
 
 const escapeHtml = (value = "") => String(value)
   .replaceAll("&", "&amp;")
@@ -31,7 +33,11 @@ function cardMarkup(post, filterable = true) {
 
 function sectionsMarkup(post) {
   const sections = Array.isArray(post.sections) ? post.sections : [];
-  return `<p class="article-lead">${escapeHtml(post.intro)}</p>${sections.map((section, index) => `<section id="section-${index + 1}"><span class="section-index">${String(index + 1).padStart(2, "0")}</span><h2>${escapeHtml(section.heading)}</h2>${(section.paragraphs || []).map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}${section.checklist?.length ? `<div class="checklist-box"><strong>바로 해보기</strong><ul>${section.checklist.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>` : ""}</section>`).join("")}<div class="article-note"><strong>편집 메모</strong><p>집의 크기와 가족 구성에 따라 맞는 방법은 달라질 수 있습니다. 한 번에 모두 바꾸기보다 가장 불편한 한 지점부터 시험해보세요.</p><a href="/contact/?subject=${encodeURIComponent(post.title || "콘텐츠 정정 요청")}">이 글의 오류·개선점 알리기 →</a></div>`;
+  const actionItems = sections.flatMap((section) => section.checklist || []).slice(0, 3);
+  const categorySlug = CATEGORY_SLUGS[post.category];
+  const quickAnswer = actionItems.length ? `<section class="quick-answer" aria-labelledby="quick-answer-title"><span>먼저 실행할 세 가지</span><h2 id="quick-answer-title">읽기 전에 시작점을 잡아보세요</h2><ol>${actionItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol></section>` : "";
+  const nextAction = `<div class="article-action"><span>오늘의 다음 행동</span><h2>${actionItems.length ? escapeHtml(actionItems[0]) : "가장 불편한 한 지점만 10분간 살펴보기"}</h2><p>한 번에 모두 바꾸지 않아도 됩니다. 가능한 시간을 고르고 이 글의 첫 단계만 생활 계획에 넣어보세요.</p><div><a class="primary-button" href="/tools/weekly-reset-planner/">내 시간에 맞는 계획 만들기</a>${categorySlug ? `<a class="text-button" href="/categories/${categorySlug}/">${escapeHtml(post.category)} 안내서 더 보기 →</a>` : ""}</div></div>`;
+  return `<p class="article-lead">${escapeHtml(post.intro)}</p>${quickAnswer}${sections.map((section, index) => `<section id="section-${index + 1}"><span class="section-index">${String(index + 1).padStart(2, "0")}</span><h2>${escapeHtml(section.heading)}</h2>${(section.paragraphs || []).map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}${section.checklist?.length ? `<div class="checklist-box"><strong>바로 해보기</strong><ul>${section.checklist.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>` : ""}</section>`).join("")}${nextAction}<div class="article-note"><strong>검토·편집 기준</strong><p>이 글은 하루결의 <a href="/editorial-policy/">편집 원칙</a>에 따라 과장된 효과를 피하고, 집의 크기와 가족 구성에 맞춰 작은 범위부터 시험하도록 작성했습니다. 내용은 ${SITE_REVIEW_DATE}에 사이트 기준과 함께 다시 확인했습니다.</p><a href="/contact/?subject=${encodeURIComponent(post.title || "콘텐츠 정정 요청")}">이 글의 오류·개선점 알리기 →</a></div>`;
 }
 
 async function publicPosts(query = "") {
