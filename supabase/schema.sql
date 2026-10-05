@@ -6,7 +6,7 @@ create table if not exists public.harugyeol_posts (
   slug text not null unique check (slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
   title text not null check (char_length(title) between 2 and 120),
   excerpt text not null check (char_length(excerpt) between 20 and 320),
-  category text not null check (category in ('정리', '청소', '주방', '루틴', '살림도구')),
+  category text not null check (category in ('생활세금', '정리', '청소', '주방', '루틴', '살림도구')),
   intro text not null check (char_length(intro) between 20 and 1000),
   sections jsonb not null default '[]'::jsonb check (jsonb_typeof(sections) = 'array'),
   status text not null default 'draft' check (status in ('draft', 'published')),

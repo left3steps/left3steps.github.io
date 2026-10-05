@@ -1,9 +1,9 @@
+import { TAX_CATEGORY, taxReviewFor, taxReviewMarkup, validateTaxReview } from "./tax-review.mjs";
 const SUPABASE_URL = "https://dikjsgxlijnsvpyclbyb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_T0w2q8uzzxEVX8KOE7HA1A_hruO35mS";
 const POSTS_TABLE = "harugyeol_posts";
 const SESSION_KEY = "harugyeol_admin_session";
-const SITE_REVIEW_DATE = "2026.10.01";
-const CATEGORY_SLUGS = { "정리": "organizing", "청소": "cleaning", "주방": "kitchen", "루틴": "routines", "살림도구": "home-tools" };
+const CATEGORY_SLUGS = { "생활세금": "tax", "정리": "organizing", "청소": "cleaning", "주방": "kitchen", "루틴": "routines", "살림도구": "home-tools" };
 
 const escapeHtml = (value = "") => String(value)
   .replaceAll("&", "&amp;")
@@ -13,6 +13,7 @@ const escapeHtml = (value = "") => String(value)
   .replaceAll("'", "&#039;");
 
 const formatDate = (value) => new Intl.DateTimeFormat("ko-KR", {
+  timeZone: "Asia/Seoul",
   year: "numeric",
   month: "long",
   day: "numeric",
@@ -35,9 +36,11 @@ function sectionsMarkup(post) {
   const sections = Array.isArray(post.sections) ? post.sections : [];
   const actionItems = sections.flatMap((section) => section.checklist || []).slice(0, 3);
   const categorySlug = CATEGORY_SLUGS[post.category];
+  const isTax = post.category === TAX_CATEGORY;
   const quickAnswer = actionItems.length ? `<section class="quick-answer" aria-labelledby="quick-answer-title"><span>먼저 실행할 세 가지</span><h2 id="quick-answer-title">읽기 전에 시작점을 잡아보세요</h2><ol>${actionItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol></section>` : "";
-  const nextAction = `<div class="article-action"><span>오늘의 다음 행동</span><h2>${actionItems.length ? escapeHtml(actionItems[0]) : "가장 불편한 한 지점만 10분간 살펴보기"}</h2><p>한 번에 모두 바꾸지 않아도 됩니다. 가능한 시간을 고르고 이 글의 첫 단계만 생활 계획에 넣어보세요.</p><div><a class="primary-button" href="/tools/weekly-reset-planner/">내 시간에 맞는 계획 만들기</a>${categorySlug ? `<a class="text-button" href="/categories/${categorySlug}/">${escapeHtml(post.category)} 안내서 더 보기 →</a>` : ""}</div></div>`;
-  return `<p class="article-lead">${escapeHtml(post.intro)}</p>${quickAnswer}${sections.map((section, index) => `<section id="section-${index + 1}"><span class="section-index">${String(index + 1).padStart(2, "0")}</span><h2>${escapeHtml(section.heading)}</h2>${(section.paragraphs || []).map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}${section.checklist?.length ? `<div class="checklist-box"><strong>바로 해보기</strong><ul>${section.checklist.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>` : ""}</section>`).join("")}${nextAction}<div class="article-note"><strong>검토·편집 기준</strong><p>이 글은 하루결의 <a href="/editorial-policy/">편집 원칙</a>에 따라 과장된 효과를 피하고, 집의 크기와 가족 구성에 맞춰 작은 범위부터 시험하도록 작성했습니다. 내용은 ${SITE_REVIEW_DATE}에 사이트 기준과 함께 다시 확인했습니다.</p><a href="/contact/?subject=${encodeURIComponent(post.title || "콘텐츠 정정 요청")}">이 글의 오류·개선점 알리기 →</a></div>`;
+  const nextAction = `<div class="article-action"><span>오늘의 다음 행동</span><h2>${actionItems.length ? escapeHtml(actionItems[0]) : (isTax ? "귀속·적용 범위와 공식 자료부터 확인하기" : "가장 불편한 한 지점만 살펴보기")}</h2><p>${isTax ? "본인의 요건과 해당 연도의 공식 원문을 확인하세요. 이 글만으로 공제 자격이나 환급액을 확정하지 않습니다." : "가능한 시간을 고르고 이 글의 첫 단계만 생활 계획에 넣어보세요."}</p><div><a class="primary-button" href="${isTax ? "/tax/" : "/tools/weekly-reset-planner/"}">${isTax ? "생활세금 안내 더 보기" : "내 시간에 맞는 계획 만들기"}</a>${categorySlug ? `<a class="text-button" href="/categories/${categorySlug}/">${escapeHtml(post.category)} 안내서 더 보기 →</a>` : ""}</div></div>`;
+  const note = `<div class="article-note"><strong>검토·편집 기준</strong><p>${isTax ? "공식 자료를 바탕으로 작성한 일반 정보입니다. 자료 확인일과 적용 범위는 위의 근거 상자에 표시합니다. 개인별 세무 자문이나 전문가의 개별 검수를 의미하지 않습니다." : "기존 생활 아카이브 글입니다. 사용한 제품과 집의 조건에 맞는 안내를 함께 확인하세요."} <a href="/editorial-policy/">편집 원칙</a>을 확인할 수 있습니다.</p><a href="/contact/?subject=${encodeURIComponent(post.title || "콘텐츠 정정 요청")}">이 글의 오류·개선점 알리기 →</a></div>`;
+  return `<p class="article-lead">${escapeHtml(post.intro)}</p>${taxReviewMarkup(post)}${quickAnswer}${sections.map((section,index)=>`<section id="section-${index+1}"><span class="section-index">${String(index+1).padStart(2,"0")}</span><h2>${escapeHtml(section.heading)}</h2>${(section.paragraphs||[]).map((paragraph)=>`<p>${escapeHtml(paragraph)}</p>`).join("")}${section.checklist?.length ? `<div class="checklist-box"><strong>바로 해보기</strong><ul>${section.checklist.map((item)=>`<li>${escapeHtml(item)}</li>`).join("")}</ul></div>` : ""}</section>`).join("")}${nextAction}${note}`;
 }
 
 async function publicPosts(query = "") {
@@ -279,6 +282,8 @@ function setupAdmin() {
     for (const name of ["id", "title", "slug", "excerpt", "category", "intro", "status", "reading_minutes"]) postForm.elements[name].value = current[name] ?? "";
     postForm.elements.featured.checked = Boolean(current.featured);
     postForm.elements.body.value = editorBody(current.sections);
+    const review = taxReviewFor(current);
+    postForm.elements.tax_review.value = review ? JSON.stringify(review, null, 2) : "";
     app.querySelector("[data-editor-title]").textContent = "글 수정";
     app.querySelector("[data-new-post]").hidden = false;
     scrollTo({ top: 0, behavior: "smooth" });
@@ -367,6 +372,16 @@ function setupAdmin() {
     };
     showMessage(saveMessage, "저장 중입니다.");
     try {
+      if (payload.category === TAX_CATEGORY) {
+        const rawReview = String(data.get("tax_review") || "").trim();
+        const review = rawReview ? JSON.parse(rawReview) : null;
+        if (status === "published") {
+          const errors = validateTaxReview(review);
+          if (errors.length) throw new Error(errors.join(" "));
+          if (!payload.sections.length) throw new Error("세금 글 본문이 필요합니다.");
+        }
+        if (review && payload.sections.length) payload.sections[0].review = review;
+      }
       const path = current ? `${POSTS_TABLE}?id=eq.${encodeURIComponent(current.id)}` : POSTS_TABLE;
       const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
         method: current ? "PATCH" : "POST",
@@ -375,7 +390,7 @@ function setupAdmin() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "저장하지 못했습니다.");
-      showMessage(saveMessage, status === "published" ? "공개 발행했습니다. 사이트 목록에 바로 반영됩니다." : "초안을 저장했습니다.");
+      showMessage(saveMessage, status === "published" ? "공개 저장했습니다. 정적 목록·사이트맵은 동기화 배포 후 반영됩니다." : "초안을 저장했습니다.");
       await loadPosts();
       if (result[0]) editPost(result[0].id);
     } catch (error) { showMessage(saveMessage, error.message, true); }

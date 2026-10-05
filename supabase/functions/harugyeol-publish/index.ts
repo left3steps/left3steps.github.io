@@ -1,11 +1,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { TAX_CATEGORY, taxReviewFor, validateTaxReview } from "./tax-review.mjs";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const PUBLISHER_HEADER = "x-harugyeol-publisher-id";
 const TIMESTAMP_HEADER = "x-harugyeol-timestamp";
 const SIGNATURE_HEADER = "x-harugyeol-signature";
-const CATEGORIES = new Set(["정리", "청소", "주방", "루틴", "살림도구"]);
+const CATEGORIES = new Set(["생활세금", "정리", "청소", "주방", "루틴", "살림도구"]);
 const ACCENTS = new Set(["sage", "clay", "sky", "butter", "plum"]);
 
 function json(data: unknown, status = 200) {
@@ -71,6 +72,7 @@ function validatePost(value: unknown): string[] {
     }
   });
   if (!validChecklist) errors.push("4~6개 항목의 체크리스트가 최소 한 섹션에 필요합니다.");
+  if (category === TAX_CATEGORY) errors.push(...validateTaxReview(taxReviewFor(post)));
   return errors;
 }
 

@@ -416,3 +416,17 @@ button { color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
 }
+.tax-hero .hero-copy h1 { font-size: clamp(2.5rem, 4.4vw, 3.5rem); line-height: 1.35; }
+.tax-hero-card { padding: 42px; border-radius: 28px; background: var(--sage-light, #e7ede6); color: #243e33; }
+.tax-hero-card h2 { margin: 16px 0; font-size: clamp(26px, 3vw, 38px); line-height: 1.4; }
+.tax-hero-card li { padding: 10px 0; }
+.tax-verification { margin: 28px 0; padding: 28px; background: #f0f4ed; border: 1px solid #cbd7c7; border-radius: 20px; }
+.tax-verification dl { margin: 20px 0; }
+.tax-verification dl div { padding: 10px 0; border-bottom: 1px solid #d9e1d5; }
+.tax-verification dt { font-weight: 700; margin-bottom: 4px; }
+.tax-verification dd { margin: 0; overflow-wrap: anywhere; }
+.tax-verification h3 { font-size: 17px; margin: 24px 0 8px; }
+.tax-verification a { color: #244c3c; text-decoration: underline; text-underline-offset: 4px; }
+.tax-disclaimer { font-size: 14px; line-height: 1.8; padding-top: 18px; color: #536059; }
+.tax-page .route-card .inline-link { display: inline-block; margin-top: 12px; }
+@media (max-width: 700px) { .tax-hero-card, .tax-verification { padding: 22px; } }
