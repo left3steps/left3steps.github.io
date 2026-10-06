@@ -1,7 +1,9 @@
 import { access, readFile, readdir } from "node:fs/promises";
 import { seedPosts } from "./data/posts.mjs";
 import assert from "node:assert/strict";
+import { runInNewContext } from "node:vm";
 import { TAX_CATEGORY, taxReviewMarkup, validateTaxReview } from "./assets/tax-review.mjs";
+import { readerQuestionsFor, selectRelatedPosts } from "./assets/content-discovery.mjs";
 
 const articleDirectories = (await readdir(new URL("docs/articles/", import.meta.url), { withFileTypes: true }))
   .filter((entry) => entry.isDirectory())
@@ -15,6 +17,7 @@ const required = [
   "docs/living/index.html",
   "docs/categories/tax/index.html",
   "docs/assets/tax-review.mjs",
+  "docs/assets/ads-loader.js",
   "docs/start/index.html",
   "docs/tools/weekly-reset-planner/index.html",
   "docs/contact/index.html",
@@ -75,7 +78,7 @@ if (!about.includes("left3steps") || !about.includes("nature@left3steps.com")) t
 if (!ads.includes('pub-1146138210876381')) throw new Error("ads.txt is incomplete");
 if (!searchVerification.includes("google-site-verification")) throw new Error("Search Console verification is incomplete");
 if (articles.some((page) => page.includes('<meta name="robots" content="noindex">'))) throw new Error("Published articles must be indexable");
-if (articles.some((page) => !page.includes('type="application/ld+json"') || !page.includes("pagead2.googlesyndication.com"))) throw new Error("Published article metadata is incomplete");
+if (articles.some((page) => !page.includes('type="application/ld+json"') || !page.includes('src="/assets/ads-loader.js"'))) throw new Error("Published article metadata is incomplete");
 if (articles.some((page) => !page.includes("먼저 실행할 세 가지") || !page.includes("오늘의 다음 행동") || !page.includes('"BreadcrumbList"'))) throw new Error("Article engagement paths are incomplete");
 if (articleDirectories.some((slug) => !sitemap.includes(`https://left3steps.github.io/articles/${slug}/`))) throw new Error("Sitemap is missing a published article");
 if (!["tax", "organizing", "cleaning", "kitchen", "routines", "home-tools"].every((slug) => sitemap.includes(`https://left3steps.github.io/categories/${slug}/`))) throw new Error("Sitemap is missing a category guide");
@@ -100,5 +103,38 @@ assert.equal(modules[0], modules[1], "Static browser validation must match the g
 assert.equal(modules[0], modules[2], "Publisher validation must match the editor");
 const taxArticles = articles.filter((page) => page.includes('class="tax-verification"'));
 if (!taxArticles.length || taxArticles.some((page) => !page.includes("자료 확인일") || !page.includes("개인별 세무·법률 자문이 아닙니다"))) throw new Error("Published tax article source metadata is incomplete");
+
+assert.ok(home.includes("지금 필요한 세금 질문"), "Home must offer question-led entry points");
+for (const page of taxArticles) {
+  assert.ok(page.indexOf('class="quick-answer"') < page.indexOf('class="tax-verification"'), "Preparation summary must precede full source metadata");
+  assert.ok(page.includes('aria-label="관련 세금 질문"'), "Tax articles must link to related tax questions");
+}
+assert.ok(client.includes('${quickAnswer}${taxReviewMarkup(post)}'), "Live hydration must preserve the static summary order");
+const questionLinks = [...home.matchAll(/class="goal-card" href="\/articles\/([^/]+)\//g)].map((match) => match[1]);
+assert.ok(questionLinks.length >= 2 && questionLinks.every((slug) => articleDirectories.includes(slug)), "Question links must target published static articles");
+
+const taxFixture = (slug, topic, publishedAt = "2026-10-05") => ({ slug, title: slug, excerpt: "자료 확인", category: TAX_CATEGORY, readingMinutes: 6, publishedAt, sections: [{ review: { topic } }] });
+const basePost = taxFixture("base", "연말정산");
+const fixtures = [basePost, taxFixture("same-a", "연말정산"), taxFixture("same-b", "연말정산"), taxFixture("same-c", "연말정산"), taxFixture("housing", "주거세금"), taxFixture("receipt", "소비·증빙"), { slug: "legacy", category: "정리", title: "자료 확인", excerpt: "자료 확인" }];
+const selected = selectRelatedPosts(basePost, fixtures);
+assert.equal(selected.length, 3);
+assert.equal(new Set(selected.map((post) => post.slug)).size, 3);
+assert.ok(selected.every((post) => post.slug !== basePost.slug && post.category === TAX_CATEGORY));
+assert.ok(selected.some((post) => post.sections[0].review.topic !== "연말정산"), "Related tax posts must include a different subtopic");
+assert.deepEqual(selectRelatedPosts(basePost, [basePost]), []);
+assert.deepEqual(readerQuestionsFor([basePost]), [], "Do not fabricate links to unpublished editorial candidates");
+
+const loader = await readFile(new URL("docs/assets/ads-loader.js", import.meta.url), "utf8");
+const loadAds = (hostname, protocol = "https:", client = "ca-pub-1146138210876381") => {
+  const appended = [];
+  runInNewContext(loader, { location: { hostname, protocol }, document: { currentScript: { dataset: { adsenseClient: client } }, createElement: () => ({}), head: { appendChild: (script) => appended.push(script) } } });
+  return appended;
+};
+for (const host of ["localhost", "127.0.0.1", "preview.example", "left3steps.github.io.evil.example"]) assert.equal(loadAds(host).length, 0, "Preview hosts must not load live ads");
+assert.equal(loadAds("left3steps.github.io", "http:").length, 0);
+assert.equal(loadAds("left3steps.github.io", "https:", "wrong-client").length, 0);
+assert.equal(loadAds("left3steps.github.io").length, 1);
+assert.equal(loadAds("left3steps.github.io")[0].src, "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1146138210876381");
+assert.ok(!admin.includes('src="/assets/ads-loader.js"'), "Admin must remain ad-free");
 
 console.log(`Verified ${required.length} required files, ${articleDirectories.length} posts and tax metadata guardrails`);

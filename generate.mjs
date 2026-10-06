@@ -1,6 +1,7 @@
 import { copyFile, mkdir, rm, writeFile } from "node:fs/promises";
 import { seedPosts } from "./data/posts.mjs";
 import { TAX_CATEGORY, TAX_TOPICS, taxReviewFor, taxReviewMarkup } from "./assets/tax-review.mjs";
+import { readerQuestionsFor, selectRelatedPosts } from "./assets/content-discovery.mjs";
 
 const ORIGIN = "https://left3steps.github.io";
 const ADSENSE_CLIENT = "ca-pub-1146138210876381";
@@ -9,7 +10,7 @@ const SUPABASE_URL = "https://dikjsgxlijnsvpyclbyb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_T0w2q8uzzxEVX8KOE7HA1A_hruO35mS";
 const POSTS_TABLE = "harugyeol_posts";
 const SITE_EMAIL = "nature@left3steps.com";
-const SITE_REVIEW_DATE = "2026-10-05";
+const SITE_REVIEW_DATE = "2026-10-07";
 const SEARCH_CONSOLE_FILE = "google24b793f83e74c099.html";
 const CATEGORY_GUIDES = [
   { name: TAX_CATEGORY, slug: "tax", accent: "sage", summary: "공식 자료로 읽는 연말정산·소비 증빙·주거세금·신고 기초", start: "귀속·적용 범위와 대상 요건, 자료 확인일부터 살펴보세요." },
@@ -22,32 +23,8 @@ const CATEGORY_GUIDES = [
 
 const categoryGuide = (name) => CATEGORY_GUIDES.find((item) => item.name === name);
 
-const RELATED_STOPWORDS = new Set([
-  "하는", "위한", "있습니다", "없습니다", "방법", "정리", "청소", "주방", "루틴", "살림", "도구", "생활", "가을", "여름", "겨울", "봄", "분", "가지",
-]);
-
-function postTokens(post) {
-  return new Set(`${post.title} ${post.excerpt}`
-    .toLowerCase()
-    .replace(/[^0-9a-z가-힣\s]/g, " ")
-    .split(/\s+/)
-    .filter((token) => token.length >= 2 && !RELATED_STOPWORDS.has(token)));
-}
-
 function relatedPostsFor(post) {
-  const tokens = postTokens(post);
-  const ranked = posts
-    .filter((item) => item.id !== post.id && (item.category === TAX_CATEGORY) === (post.category === TAX_CATEGORY))
-    .map((item) => {
-      const shared = [...postTokens(item)].filter((token) => tokens.has(token)).length;
-      const sameCategory = item.category === post.category;
-      const similarLength = Math.abs(item.readingMinutes - post.readingMinutes) <= 1;
-      return { item, score: (sameCategory ? 8 : 0) + shared * 3 + (similarLength ? 1 : 0) };
-    })
-    .sort((a, b) => b.score - a.score || new Date(b.item.publishedAt) - new Date(a.item.publishedAt));
-  const sameCategory = ranked.filter(({ item }) => item.category === post.category).slice(0, 2);
-  const nextTopic = ranked.find(({ item }) => item.category !== post.category);
-  return [...sameCategory, ...(nextTopic ? [nextTopic] : [])].map(({ item }) => item);
+  return selectRelatedPosts(post, posts);
 }
 
 const escapeHtml = (value = "") => String(value)
@@ -138,7 +115,7 @@ function document({ title, description, path = "/", content, schema = null, noin
   <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="/assets/styles.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2248%22 fill=%22%2336564b%22/><text x=%2250%22 y=%2265%22 font-size=%2252%22 text-anchor=%22middle%22 fill=%22white%22>ㅎ</text></svg>">
-  ${noindex ? "<!-- AdSense is disabled on utility pages. -->" : `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}" crossorigin="anonymous"></script>`}
+  ${noindex ? "<!-- AdSense is disabled on utility pages. -->" : `<script src="/assets/ads-loader.js" defer data-adsense-client="${ADSENSE_CLIENT}"></script>`}
   ${schema ? `<script type="application/ld+json">${JSON.stringify(schema).replaceAll("<", "\\u003c")}</script>` : ""}
 </head>
 <body>
@@ -190,10 +167,22 @@ function home() {
   return document({ title: "하루결", description: "연말정산·소비 증빙·주거세금·신고 기초를 공식 출처, 적용 범위와 확인일로 읽는 생활세금 안내.",
     schema: { "@context": "https://schema.org", "@type": "WebSite", name: "하루결 생활세금", url: ORIGIN, inLanguage: "ko-KR" },
     content: `<section class="hero-shell tax-hero"><div class="hero-copy"><span class="kicker">Everyday tax, official sources</span><h1>생활 속 세금,<br>근거부터 차근차근.</h1><p>공제 이름보다 중요한 것은 적용되는 연도와 내 조건입니다. 연말정산부터 주거세금까지, 공식 자료를 읽고 확인할 질문을 정리합니다.</p><div class="hero-actions"><a class="primary-button" href="/tax/">생활세금 안내 보기</a><a class="text-button" href="/start/">세금 글을 읽는 기준 →</a></div></div><div class="tax-hero-card"><span class="kicker">Read before applying</span><h2>이 글이 내 상황에도<br>적용될까요?</h2><ol><li>귀속·적용 범위 확인</li><li>대상 요건과 예외 구분</li><li>공식 출처와 확인일 확인</li></ol><p>환급 보장이나 개인별 세무 자문 대신,<br>확인 가능한 정보부터 제공합니다.</p></div></section>
-    <section class="section-shell"><div class="section-heading"><div><span class="section-number">01</span><h2>새로운 생활세금 안내</h2></div><a class="text-button" href="/categories/tax/">세금 글 모두 보기 →</a></div><div class="article-grid">${taxPosts.slice(0,6).map((post) => card(post)).join("")}</div>${taxPosts.length ? "" : "<p>공식 자료를 확인한 첫 안내서를 준비하고 있습니다.</p>"}</section>
+    ${taxQuestionSection(taxPosts)}
+    <section class="section-shell"><div class="section-heading"><div><span class="section-number">New</span><h2>새로운 생활세금 안내</h2></div><a class="text-button" href="/categories/tax/">세금 글 모두 보기 →</a></div><div class="article-grid">${taxPosts.slice(0,6).map((post) => card(post, false, taxReviewFor(post)?.topic || TAX_CATEGORY)).join("")}</div>${taxPosts.length ? "" : "<p>공식 자료를 확인한 첫 안내서를 준비하고 있습니다.</p>"}</section>
     <section class="section-shell"><div class="section-heading"><div><span class="section-number">Guide</span><h2>필요한 세금 주제부터 찾기</h2></div><p>네 가지 생활 질문을 중심으로 안내서를 이어갑니다.</p></div><div class="goal-grid">${TAX_TOPICS.map((topic,index) => `<a class="goal-card" href="/tax/#topic-${index+1}"><span>${topic}</span><strong>${["공제와 환급 구조가 궁금할 때","결제 기록과 증빙을 확인할 때","월세·이사와 세금의 관계를 볼 때","귀속연도와 신고 절차를 구분할 때"][index]}</strong><p>대상, 연도, 공식 안내를 먼저 확인합니다.</p><small>주제와 확인 기준 보기 →</small></a>`).join("")}</div></section>
     <section class="manifesto-band"><div class="manifesto-inner"><span>하루결의 기준</span><blockquote>“얼마를 돌려받는지 단정하기 전에,<br>어떤 조건의 정보인지 먼저 확인합니다.”</blockquote><a href="/editorial-policy/">출처·검토·수정 원칙 보기 →</a></div></section>
     <section class="section-shell"><div class="section-heading"><h2>기존 생활 안내서는 그대로</h2><a class="text-button" href="/living/">생활 아카이브 ${livingPosts.length}편 →</a></div><p>정리·청소·주방·루틴·살림도구 글은 기존 주소에서 계속 읽을 수 있습니다. 새 글 발행은 생활세금으로 전환합니다.</p></section>` });
+}
+
+function taxQuestionSection(taxPosts) {
+  const questions = readerQuestionsFor(taxPosts);
+  if (!questions.length) return "";
+  return `<section class="section-shell tax-questions" aria-labelledby="tax-questions-title"><div class="section-heading"><div><span class="section-number">Q</span><h2 id="tax-questions-title">지금 필요한 세금 질문</h2></div><p>내 상황에 맞는 질문을 골라 준비 순서부터 확인하세요.</p></div><div class="tax-question-grid">${questions.map(({ topic, question, description, post }) => `<a class="goal-card" href="/articles/${escapeHtml(post.slug)}/"><span>${escapeHtml(topic)}</span><strong>${escapeHtml(question)}</strong><p>${escapeHtml(description)}</p><small>근거와 확인 순서 읽기 →</small></a>`).join("")}</div></section>`;
+}
+
+function taxReadingPath(post, related) {
+  if (post.category !== TAX_CATEGORY || !related.length) return "";
+  return `<nav class="tax-reading-path" aria-label="관련 세금 질문"><strong>함께 확인할 세금 질문</strong><ul>${related.slice(0, 2).map((item) => `<li><a href="/articles/${escapeHtml(item.slug)}/"><span>${escapeHtml(taxReviewFor(item)?.topic || TAX_CATEGORY)}</span>${escapeHtml(item.title)} →</a></li>`).join("")}</ul></nav>`;
 }
 
 function articleLibrary(livingOnly = false) {
@@ -272,10 +261,10 @@ function article(post) {
     description: post.excerpt,
     path: `/articles/${post.slug}/`,
     schema,
-    content: `<article data-live-article data-post-slug="${escapeHtml(post.slug)}"><nav class="breadcrumbs" aria-label="현재 위치"><a href="/">홈</a><span>/</span><a href="/articles/">생활 안내서</a><span>/</span>${guide ? `<a href="/categories/${guide.slug}/" data-live-category>${escapeHtml(post.category)}</a>` : `<span data-live-category>${escapeHtml(post.category)}</span>`}</nav>
+    content: `<article class="${post.category === TAX_CATEGORY ? "tax-article" : "living-article"}" data-live-article data-post-slug="${escapeHtml(post.slug)}"><nav class="breadcrumbs" aria-label="현재 위치"><a href="/">홈</a><span>/</span><a href="/articles/">생활 안내서</a><span>/</span>${guide ? `<a href="/categories/${guide.slug}/" data-live-category>${escapeHtml(post.category)}</a>` : `<span data-live-category>${escapeHtml(post.category)}</span>`}</nav>
       <header class="article-hero accent-${post.accent}" data-live-hero><div class="article-title-wrap"><div class="eyebrow-row"><span data-live-category>${escapeHtml(post.category)}</span><span data-live-reading>${post.readingMinutes}분 읽기</span></div><h1 data-live-title>${escapeHtml(post.title)}</h1><p data-live-excerpt>${escapeHtml(post.excerpt)}</p><div class="article-byline"><a href="/about/">하루결 운영·편집</a><span><time datetime="${post.publishedAt}" data-live-date>발행 ${formatDate(post.publishedAt)}</time>${showUpdated ? ` · <time datetime="${post.updatedAt}">수정 ${formatDate(post.updatedAt)}</time>` : ""}</span></div></div><div class="article-hero-art" aria-hidden="true"><span></span><i></i><b></b></div></header>
-      <div class="article-layout"><aside class="article-aside"><span>이 글의 핵심</span><p data-live-intro>${escapeHtml(post.intro)}</p>${toc}</aside><div class="article-content" data-live-content><p class="article-lead">${escapeHtml(post.intro)}</p>${taxReviewMarkup(post)}${actionItems.length ? `<section class="quick-answer" aria-labelledby="quick-answer-title"><span>먼저 실행할 세 가지</span><h2 id="quick-answer-title">읽기 전에 시작점을 잡아보세요</h2><ol>${actionItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol></section>` : ""}${sections}${articleAction(post, actionItems, guide)}${articleNote(post)}</div></div></article>
-      ${related.length ? `<section class="section-shell related-section"><div class="section-heading"><div><span class="section-number">Next</span><h2>다음에 읽을 안내서</h2></div><p>같은 주제를 깊게 보거나, 이어지는 생활 단계로 이동하세요.</p></div><div class="article-grid related-grid">${related.map((item) => card(item, false, item.category === post.category ? `${post.category} 이어 읽기` : `다음 생활 단계 · ${item.category}`)).join("")}</div></section>` : ""}`,
+      <div class="article-layout"><aside class="article-aside"><span>이 글의 핵심</span><p data-live-intro>${escapeHtml(post.intro)}</p>${toc}${taxReadingPath(post, related)}</aside><div class="article-content" data-live-content><p class="article-lead">${escapeHtml(post.intro)}</p>${actionItems.length ? `<section class="quick-answer" aria-labelledby="quick-answer-title"><span>먼저 실행할 세 가지</span><h2 id="quick-answer-title">${post.category === TAX_CATEGORY ? "필요한 준비부터 확인하세요" : "읽기 전에 시작점을 잡아보세요"}</h2>${post.category === TAX_CATEGORY ? '<p class="quick-answer-caution">아래 항목은 준비 순서입니다. 공제 자격 판정이 아니며, 적용 범위와 공식 근거를 함께 확인하세요.</p>' : ""}<ol>${actionItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol></section>` : ""}${taxReviewMarkup(post)}${sections}${articleAction(post, actionItems, guide)}${articleNote(post)}</div></div></article>
+      ${related.length ? `<section class="section-shell related-section"><div class="section-heading"><div><span class="section-number">Next</span><h2>다음에 읽을 안내서</h2></div><p>${post.category === TAX_CATEGORY ? "공제의 구조와 증빙 확인을 이어 읽고, 본인에게 필요한 질문을 좁혀보세요." : "같은 주제를 깊게 보거나, 이어지는 생활 단계로 이동하세요."}</p></div><div class="article-grid related-grid">${related.map((item) => card(item, false, post.category === TAX_CATEGORY ? `${taxReviewFor(item)?.topic || TAX_CATEGORY} 이어 읽기` : item.category === post.category ? `${post.category} 이어 읽기` : `다음 생활 단계 · ${item.category}`)).join("")}</div></section>` : ""}`,
   });
 }
 
@@ -413,6 +402,7 @@ await mkdir(new URL("assets/", OUT), { recursive: true });
 await Promise.all([
   copyFile(new URL("assets/styles.css", import.meta.url), new URL("assets/styles.css", OUT)),
   copyFile(new URL("assets/site.js", import.meta.url), new URL("assets/site.js", OUT)),
+  copyFile(new URL("assets/ads-loader.js", import.meta.url), new URL("assets/ads-loader.js", OUT)),
   copyFile(new URL("assets/tax-review.mjs", import.meta.url), new URL("assets/tax-review.mjs", OUT)),
   copyFile(new URL("assets/og.png", import.meta.url), new URL("assets/og.png", OUT)),
 ]);

@@ -417,9 +417,29 @@ button { color: inherit; }
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
 }
 .tax-hero .hero-copy h1 { font-size: clamp(2.5rem, 4.4vw, 3.5rem); line-height: 1.35; }
+.tax-hero { min-height: 420px; margin-bottom: 64px; }
+.tax-hero .hero-copy { padding: 48px; }
+.tax-hero .hero-actions { margin-top: 24px; flex-wrap: wrap; }
 .tax-hero-card { padding: 42px; border-radius: 28px; background: var(--sage-light, #e7ede6); color: #243e33; }
 .tax-hero-card h2 { margin: 16px 0; font-size: clamp(26px, 3vw, 38px); line-height: 1.4; }
 .tax-hero-card li { padding: 10px 0; }
+.tax-question-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.tax-reading-path { margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--line); font-family: var(--font-sans); }
+.tax-reading-path > strong { font-size: .85rem; }
+.tax-reading-path ul { list-style: none; margin: 10px 0 0; padding: 0; }
+.tax-reading-path li { margin: 14px 0; }
+.tax-reading-path a { display: block; font-size: .8rem; line-height: 1.8; color: var(--deep-sage); text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.tax-reading-path a span { display: block; font-size: .7rem; color: var(--muted); text-decoration: none; }
+.quick-answer .quick-answer-caution { margin: 0 0 18px; font-family: var(--font-sans); font-size: .8rem; line-height: 1.8; }
+.article-content .quick-answer { margin: 0 0 36px !important; }
+.tax-verification { scroll-margin-top: 100px; }
+@media (max-width: 900px) { .tax-question-grid { grid-template-columns: 1fr; } }
+@media (max-width: 700px) {
+  .tax-article .article-hero-art { display: none; }
+  .tax-article .article-title-wrap { padding: 32px 24px; }
+  .tax-article .article-title-wrap h1 { font-size: 2rem; line-height: 1.45; word-break: keep-all; overflow-wrap: anywhere; }
+  .tax-article .article-aside > span, .tax-article .article-aside > p { display: none; }
+}
 .tax-verification { margin: 28px 0; padding: 28px; background: #f0f4ed; border: 1px solid #cbd7c7; border-radius: 20px; }
 .tax-verification dl { margin: 20px 0; }
 .tax-verification dl div { padding: 10px 0; border-bottom: 1px solid #d9e1d5; }
