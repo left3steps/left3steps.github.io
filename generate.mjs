@@ -392,11 +392,14 @@ for (const post of posts) await output(`articles/${post.slug}/index.html`, artic
 for (const guide of CATEGORY_GUIDES) await output(`categories/${guide.slug}/index.html`, categoryPage(guide));
 for (const [slug, page] of Object.entries(pages)) await output(`${slug}/index.html`, infoPage(slug, page));
 await output("404.html", document({ title: "페이지를 찾을 수 없습니다", description: "요청하신 페이지가 없습니다.", path: "/404.html", noindex: true, content: `<div class="not-found"><span>404</span><h1>페이지를 찾을 수 없습니다.</h1><p>주소가 바뀌었거나 삭제된 페이지입니다.</p><a class="primary-button" href="/">홈으로 돌아가기</a></div>` }));
-await output("robots.txt", `User-agent: *\nAllow: /\n\nSitemap: ${ORIGIN}/sitemap.xml\n`);
+await output("robots.txt", `User-agent: *\nAllow: /\n\nSitemap: ${ORIGIN}/sitemap.xml\nSitemap: ${ORIGIN}/sitemap.txt\n`);
 await output("ads.txt", `google.com, pub-1146138210876381, DIRECT, f08c47fec0942fa0\n`);
 await output(SEARCH_CONSOLE_FILE, `google-site-verification: ${SEARCH_CONSOLE_FILE}\n`);
 const staticSitemapPaths = ["/", "/tax/", "/living/", "/start/", "/articles/", "/tools/weekly-reset-planner/", "/about/", "/contact/", "/editorial-policy/", "/privacy/", "/terms/", ...CATEGORY_GUIDES.map((guide) => `/categories/${guide.slug}/`)];
 await output("sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${staticSitemapPaths.map((path) => `<url><loc>${ORIGIN}${path}</loc><lastmod>${SITE_REVIEW_DATE}</lastmod></url>`).join("")}${posts.map((post) => `<url><loc>${ORIGIN}/articles/${post.slug}/</loc><lastmod>${String(post.updatedAt || post.publishedAt).slice(0, 10)}</lastmod></url>`).join("")}</urlset>\n`);
+// Keep a Google-supported plain-text discovery path in sync with the XML sitemap.
+const sitemapUrls = [...staticSitemapPaths.map((path) => `${ORIGIN}${path}`), ...posts.map((post) => `${ORIGIN}/articles/${post.slug}/`)];
+await output("sitemap.txt", `${sitemapUrls.join("\n")}\n`);
 await output(".nojekyll", "");
 await mkdir(new URL("assets/", OUT), { recursive: true });
 await Promise.all([

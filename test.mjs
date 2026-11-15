@@ -36,6 +36,7 @@ const required = [
   "docs/ads.txt",
   "docs/google24b793f83e74c099.html",
   "docs/sitemap.xml",
+  "docs/sitemap.txt",
   ...articleDirectories.map((slug) => `docs/articles/${slug}/index.html`),
 ];
 
@@ -50,6 +51,8 @@ const schema = await readFile(new URL("supabase/schema.sql", import.meta.url), "
 const publisher = await readFile(new URL("supabase/functions/harugyeol-publish/index.ts", import.meta.url), "utf8");
 const publisherClient = await readFile(new URL("scripts/publish-post.mjs", import.meta.url), "utf8");
 const sitemap = await readFile(new URL("docs/sitemap.xml", import.meta.url), "utf8");
+const textSitemap = await readFile(new URL("docs/sitemap.txt", import.meta.url), "utf8");
+const robots = await readFile(new URL("docs/robots.txt", import.meta.url), "utf8");
 const start = await readFile(new URL("docs/start/index.html", import.meta.url), "utf8");
 const planner = await readFile(new URL("docs/tools/weekly-reset-planner/index.html", import.meta.url), "utf8");
 const about = await readFile(new URL("docs/about/index.html", import.meta.url), "utf8");
@@ -83,6 +86,18 @@ if (articles.some((page) => !page.includes("먼저 실행할 세 가지") || !pa
 if (articleDirectories.some((slug) => !sitemap.includes(`https://left3steps.github.io/articles/${slug}/`))) throw new Error("Sitemap is missing a published article");
 if (!["tax", "organizing", "cleaning", "kitchen", "routines", "home-tools"].every((slug) => sitemap.includes(`https://left3steps.github.io/categories/${slug}/`))) throw new Error("Sitemap is missing a category guide");
 if (!["tax", "living"].every((slug) => sitemap.includes(`https://left3steps.github.io/${slug}/`))) throw new Error("Sitemap is missing a pivot landing page");
+const xmlSitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+const textSitemapUrls = textSitemap.trimEnd().split("\n");
+assert.deepEqual(textSitemapUrls, xmlSitemapUrls, "Text and XML sitemaps must list the same canonical URLs");
+assert.equal(new Set(textSitemapUrls).size, textSitemapUrls.length, "Sitemap URLs must be unique");
+assert.ok(textSitemapUrls.length > 0 && textSitemapUrls.length <= 50000 && Buffer.byteLength(textSitemap, "utf8") <= 50 * 1024 * 1024, "Text sitemap must respect sitemap size limits");
+for (const value of textSitemapUrls) {
+  const url = new URL(value);
+  assert.ok(/^https:\/\/left3steps\.github\.io\/[a-z0-9/-]*$/.test(value), "Text sitemap must contain one canonical HTTPS URL per line, without markup or whitespace");
+  assert.equal(url.origin, "https://left3steps.github.io");
+  assert.ok(!["/admin/", "/article/", "/404.html"].includes(url.pathname), "Non-canonical and noindex pages must not enter sitemaps");
+}
+assert.ok(robots.includes("Sitemap: https://left3steps.github.io/sitemap.xml\n") && robots.includes("Sitemap: https://left3steps.github.io/sitemap.txt\n"), "Robots must advertise both maintained sitemap formats");
 if (!schema.includes("harugyeol_automation_tokens") || !schema.includes("enable row level security")) throw new Error("Automation token schema is incomplete");
 if (!publisher.includes("x-harugyeol-signature") || !publisher.includes('status: "published"')) throw new Error("Automated publisher is incomplete");
 if (/sb_secret_|service_role/i.test(publisherClient)) throw new Error("Publisher client must not contain a Supabase secret key");
