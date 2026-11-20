@@ -98,6 +98,11 @@ for (const value of textSitemapUrls) {
   assert.ok(!["/admin/", "/article/", "/404.html"].includes(url.pathname), "Non-canonical and noindex pages must not enter sitemaps");
 }
 assert.ok(robots.includes("Sitemap: https://left3steps.github.io/sitemap.xml\n") && robots.includes("Sitemap: https://left3steps.github.io/sitemap.txt\n"), "Robots must advertise both maintained sitemap formats");
+for (const [, loc, metadata] of sitemap.matchAll(/<url>\s*<loc>([^<]+)<\/loc>([\s\S]*?)<\/url>/g)) {
+  if (!/^\/articles\/[a-z0-9-]+\/$/.test(new URL(loc).pathname)) {
+    assert.ok(!metadata.includes("<lastmod>"), "Do not use the global site review date as a page modification date");
+  }
+}
 if (!schema.includes("harugyeol_automation_tokens") || !schema.includes("enable row level security")) throw new Error("Automation token schema is incomplete");
 if (!publisher.includes("x-harugyeol-signature") || !publisher.includes('status: "published"')) throw new Error("Automated publisher is incomplete");
 if (/sb_secret_|service_role/i.test(publisherClient)) throw new Error("Publisher client must not contain a Supabase secret key");

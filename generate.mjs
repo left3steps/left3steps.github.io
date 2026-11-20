@@ -396,7 +396,8 @@ await output("robots.txt", `User-agent: *\nAllow: /\n\nSitemap: ${ORIGIN}/sitema
 await output("ads.txt", `google.com, pub-1146138210876381, DIRECT, f08c47fec0942fa0\n`);
 await output(SEARCH_CONSOLE_FILE, `google-site-verification: ${SEARCH_CONSOLE_FILE}\n`);
 const staticSitemapPaths = ["/", "/tax/", "/living/", "/start/", "/articles/", "/tools/weekly-reset-planner/", "/about/", "/contact/", "/editorial-policy/", "/privacy/", "/terms/", ...CATEGORY_GUIDES.map((guide) => `/categories/${guide.slug}/`)];
-await output("sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${staticSitemapPaths.map((path) => `<url><loc>${ORIGIN}${path}</loc><lastmod>${SITE_REVIEW_DATE}</lastmod></url>`).join("")}${posts.map((post) => `<url><loc>${ORIGIN}/articles/${post.slug}/</loc><lastmod>${String(post.updatedAt || post.publishedAt).slice(0, 10)}</lastmod></url>`).join("")}</urlset>\n`);
+// Site review dates are not page modification dates. Omit lastmod when it is not tracked.
+await output("sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${staticSitemapPaths.map((path) => `<url><loc>${ORIGIN}${path}</loc></url>`).join("")}${posts.map((post) => `<url><loc>${ORIGIN}/articles/${post.slug}/</loc><lastmod>${String(post.updatedAt || post.publishedAt).slice(0, 10)}</lastmod></url>`).join("")}</urlset>\n`);
 // Keep a Google-supported plain-text discovery path in sync with the XML sitemap.
 const sitemapUrls = [...staticSitemapPaths.map((path) => `${ORIGIN}${path}`), ...posts.map((post) => `${ORIGIN}/articles/${post.slug}/`)];
 await output("sitemap.txt", `${sitemapUrls.join("\n")}\n`);
